@@ -1,0 +1,85 @@
+# posts/ 에 새 시황 글이 올라오면 보낸다 (공개 저장소라 GitHub 사용 시간 무료)
+#   posts/2026-10-30-us.md  + media/2026-10-30-us.png              → 텔레그램 (그림 + 글)
+#   posts/2026-10-30-kr.md  + media/2026-10-30-kr.png, -kr.json    → 텔레그램 + 인스타 릴스 + 인스타 사진
+# 글과 그림은 매일 Claude 예약 작업이 비공개 레이더(kr-radar)의 재료를 보고 만들어 여기에 올린다.
+name: send
+
+on:
+  push:
+    branches: [main]
+    paths: ["posts/**"]
+  workflow_dispatch:
+    inputs:
+      day:
+        description: "다시 보낼 날짜 (예: 2026-10-29)"
+        required: true
+      kind:
+        type: choice
+        options: [kr, us]
+        default: kr
+      only:
+        description: "보낼 곳"
+        type: choice
+        options: [전부, 텔레그램, 인스타, 인스타 시험(게시 안 함)]
+        default: 인스타 시험(게시 안 함)
+
+permissions:
+  contents: write
+
+concurrency:
+  group: send
+  cancel-in-progress: false
+
+env:
+  TG_CHAT: "@kospiradar"
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 보낼 글 찾기
+        id: f
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "list=${{ inputs.day }}-${{ inputs.kind }}" >> "$GITHUB_OUTPUT"; echo "only=${{ inputs.only }}" >> "$GITHUB_OUTPUT"
+          else
+            if git cat-file -e "$BEFORE" 2>/dev/null; then RANGE="$BEFORE..HEAD"; else RANGE="HEAD~1..HEAD"; fi
+            L=$(git diff --name-only --diff-filter=A $RANGE -- posts/ | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}-(us|kr)' | tr '\n' ' ')
+            echo "list=$L" >> "$GITHUB_OUTPUT"; echo "only=전부" >> "$GITHUB_OUTPUT"
+          fi
+      - name: 텔레그램
+        if: steps.f.outputs.list != '' && (steps.f.outputs.only == '전부' || steps.f.outputs.only == '텔레그램')
+        env:
+          TOK: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          [ -z "$TOK" ] && { echo "::error::Secrets에 TELEGRAM_BOT_TOKEN 이 없어요"; exit 1; }
+          for K in ${{ steps.f.outputs.list }}; do
+            [ -f "media/$K.png" ] && curl -sS -o /dev/null -w "사진 %{http_code}\n" -F chat_id="$TG_CHAT" -F photo=@"media/$K.png" "https://api.telegram.org/bot$TOK/sendPhoto"
+            curl -sS -o /dev/null -w "글 %{http_code}\n" --data-urlencode chat_id="$TG_CHAT" --data-urlencode text@"posts/$K.md" \
+              -d disable_web_page_preview=true "https://api.telegram.org/bot$TOK/sendMessage"
+          done
+      - name: 인스타 (국장만 · 릴스 + 사진)
+        if: contains(steps.f.outputs.list, '-kr') && steps.f.outputs.only != '텔레그램'
+        env:
+          IG_TOKEN: ${{ secrets.IG_TOKEN }}
+          ONLY: ${{ steps.f.outputs.only }}
+        run: |
+          [ -z "$IG_TOKEN" ] && { echo "::error::Secrets에 IG_TOKEN 이 없어요"; exit 1; }
+          pip install -q requests imageio-ffmpeg pillow
+          K=$(echo "${{ steps.f.outputs.list }}" | grep -oE '[0-9-]+-kr' | head -1)
+          python insta.py video media/$K.png /tmp/reel.mp4
+          if [ "$ONLY" = "인스타 시험(게시 안 함)" ]; then python insta.py test /tmp/reel.mp4 media/$K.json; exit 0; fi
+          python insta.py post /tmp/reel.mp4 media/$K.json
+          # 사진 게시물: 인스타는 jpg 공개 주소만 받으니, jpg 로 바꿔 이 저장소에 올리고 그 주소를 넘긴다
+          python -c "from PIL import Image; Image.open('media/$K.png').convert('RGB').save('media/$K.jpg', quality=95, subsampling=0)"
+          git config user.name "kospiradar-bot"; git config user.email "actions@users.noreply.github.com"
+          git add media/$K.jpg && git commit -q -m "사진용 jpg $K" && git pull -q --rebase origin main && git push -q origin HEAD:main
+          SHA=$(git rev-parse HEAD)
+          sleep 5
+          python insta.py photo "https://raw.githubusercontent.com/${{ github.repository }}/$SHA/media/$K.jpg" media/$K.json
