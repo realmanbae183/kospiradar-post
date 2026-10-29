@@ -1,8 +1,11 @@
 """
-insta.py — 오늘의 국장 그림을 릴스 영상과 사진 게시물로 인스타그램(@stock_burger_king)에 올린다.
-  python insta.py photo <공개 jpg 주소> media/날짜-kr.json   사진 게시물 올리기
-  python insta.py video state/brief/kr.png out.mp4      그림 → 9:16 릴스 영상 (8초, 천천히 확대, 무음)
-  python insta.py post  out.mp4 state/brief/kr.json      릴스 올리기 (IG_TOKEN 필요)
+insta.py — 굿모닝 미장 · 오늘의 국장 그림을 인스타그램(@stock_burger_king)에 릴스 1개 + 스토리 1개로 올린다.
+  python insta.py video media/날짜-kr.png out.mp4           그림 → 9:16 릴스 영상 (8초, 고정 화면, 무음)
+  python insta.py frame out.mp4 out.jpg                      영상 한 장면 → 스토리용 9:16 jpg
+  python insta.py post  out.mp4 media/날짜-kr.json [캡션파일] 릴스 올리기
+  python insta.py story <공개 jpg 주소>                       스토리 올리기
+  python insta.py caption media/날짜-kr.json [캡션파일]       캡션 미리보기
+캡션은 매일 Claude 가 쓴 posts/날짜-kind.ig.txt 를 쓰고, 없으면 아래 기본 틀로 만든다.
 열쇠(IG_TOKEN)는 GitHub Secrets 에만 있다. 페이지 토큰이라 만료가 없다(단, 90일마다 데이터 접근 갱신 필요할 수 있음).
 """
 from __future__ import annotations
@@ -18,19 +21,42 @@ import requests
 IG_USER = "17841441575106165"          # @stock_burger_king (공개 정보)
 API = "https://graph.facebook.com/v26.0"
 
-CAPTION = """[{date}]
-오늘의 국장 지표입니다.🍔
-
-매일 장 마감 후 오늘의 국장 지표를 정리해 업로드하고 있습니다.
-
-다음 날 새로운 국장 지표가 업로드되면
-피드의 통일성과 깔끔한 구성을 위해 이전 영상은 보관처리하고 있습니다.
-
-매일 업데이트되는 시장 흐름이 궁금하시다면
-팔로우하시고 편하게 정보 받아가세요~❤️
+WEEK = "월화수목금토일"
+KEEP = "📌 피드를 깔끔하게 보시도록 지난 지표는 다음 날 보관하고, 매일 그날의 새 지표로 찾아옵니다."
+TAGS = {"kr": "#투자 #주식 #경제 #경제적자유 #코스피 #코스닥 #국내증시",
+        "us": "#투자 #주식 #경제 #미국주식 #미국증시 #나스닥 #SP500"}
 
 
-#투자 #주식 #경제 #경제적자유 #코스피"""
+def _sgn(p) -> str:
+    return "–" if p is None else f"{p:+.2f}%"
+
+
+def default_caption(b: dict) -> str:
+    """Claude 가 쓴 캡션이 없을 때 쓰는 기본 틀 (숫자는 재료에서만)."""
+    from datetime import date as _d
+    if "us" in b:                                   # 굿모닝 미장
+        u = b["us"]; y, m, d = map(int, str(b["date"]).split("-"))
+        day = f"{m}월 {d}일 {WEEK[_d(y, m, d).weekday()]}요일"
+        ix = {x["n"]: x.get("p") for x in u.get("idx", [])}
+        up = sum(1 for v in ix.values() if (v or 0) > 0)
+        mark = "📈" if up >= 2 else "📉"
+        fg = u.get("fg") or {}
+        return (f"🍔 [{day}] 굿모닝 미장\n🇺🇸 미국 증시, 오늘은 어떤 흐름이었을까요?\n"
+                f"{mark} 다우 {_sgn(ix.get('다우존스'))} · S&P500 {_sgn(ix.get('S&P500'))} · 나스닥 {_sgn(ix.get('나스닥 종합'))}\n"
+                + (f"공포탐욕지수는 {fg.get('v')}, '{fg.get('r')}' 구간이에요.\n" if fg.get("v") is not None else "")
+                + "매일 아침 미국장 마감 지표를 한 장으로 정리해 올려요. 팔로우하고 아침마다 확인해 보세요 ❤️\n"
+                + KEEP + "\n\n" + TAGS["us"])
+    t = b.get("today") or b                          # 오늘의 국장
+    ix = {x["n"]: x.get("p") for x in t.get("idx", [])}
+    dow = (t.get("dow") or b.get("dow") or "").rstrip("요일")
+    kp = ix.get("코스피") or 0
+    mark, word = ("📈", "상승") if kp > 0 else ("📉", "하락") if kp < 0 else ("➖", "보합")
+    return (f"🍔 [{t.get('date') or b.get('date')} {dow}요일] 오늘의 국장\n"
+            f"{mark} 코스피 {_sgn(ix.get('코스피'))} · 코스닥 {_sgn(ix.get('코스닥'))}\n"
+            f"오늘 국내 증시는 {word} 마감했습니다.\n"
+            "업종별 등락부터 투자자 동향, 환율·금·유가까지 오늘의 국장 지표를 한눈에 확인하세요! 📊\n"
+            "매일 장 마감 후 업데이트되는 증시 정보, 팔로우하고 꾸준히 확인해 보세요 ❤️\n"
+            + KEEP + "\n\n" + TAGS["kr"])
 
 
 def video(img: str, out: str, sec: int = 8) -> None:
@@ -53,15 +79,48 @@ def video(img: str, out: str, sec: int = 8) -> None:
     subprocess.run(cmd, check=True)
 
 
-def caption(brief: str) -> str:
-    b = json.load(open(brief, encoding="utf-8"))
-    date = f"{b.get('date') or ''} ({b.get('dow') or ''})".strip()
-    return CAPTION.format(date=date)
+def caption(brief: str, cap_file: str | None = None) -> str:
+    if cap_file and os.path.exists(cap_file):
+        t = open(cap_file, encoding="utf-8").read().strip()
+        if t:
+            return t[:2150]
+    return default_caption(json.load(open(brief, encoding="utf-8")))[:2150]
 
 
-def post(mp4: str, brief: str, publish: bool = True) -> str:
+def frame(mp4: str, out: str) -> None:
+    """릴스 영상의 한 장면을 스토리용 jpg 로."""
+    import shutil
+    ff = shutil.which("ffmpeg")
+    if not ff:
+        import imageio_ffmpeg
+        ff = imageio_ffmpeg.get_ffmpeg_exe()
+    subprocess.run([ff, "-y", "-loglevel", "error", "-ss", "1", "-i", mp4, "-frames:v", "1", "-q:v", "2", out], check=True)
+
+
+def story(url: str) -> str:
+    """스토리 (사진). 인스타는 '공개 주소'의 jpg 만 받아 간다."""
     tok = os.environ["IG_TOKEN"]
-    cap = caption(brief)
+    r = requests.post(f"{API}/{IG_USER}/media", data={"media_type": "STORIES", "image_url": url, "access_token": tok}, timeout=60)
+    if not r.ok:
+        raise SystemExit(f"[인스타] 스토리 컨테이너 실패: {r.status_code} {r.text[:400]}")
+    cid = r.json()["id"]
+    for _ in range(24):
+        st = requests.get(f"{API}/{cid}", params={"fields": "status_code", "access_token": tok}, timeout=30).json()
+        if st.get("status_code") == "FINISHED":
+            break
+        if st.get("status_code") in ("ERROR", "EXPIRED"):
+            raise SystemExit(f"[인스타] 스토리 처리 실패: {st}")
+        time.sleep(5)
+    p = requests.post(f"{API}/{IG_USER}/media_publish", data={"creation_id": cid, "access_token": tok}, timeout=60)
+    if not p.ok:
+        raise SystemExit(f"[인스타] 스토리 게시 실패: {p.status_code} {p.text[:300]}")
+    print("[인스타] 스토리 게시 완료:", p.json().get("id"))
+    return p.json().get("id")
+
+
+def post(mp4: str, brief: str, publish: bool = True, cap_file: str | None = None) -> str:
+    tok = os.environ["IG_TOKEN"]
+    cap = caption(brief, cap_file)
     r = requests.post(f"{API}/{IG_USER}/media", data={"media_type": "REELS", "upload_type": "resumable",
                                                       "caption": cap, "share_to_feed": "true", "access_token": tok}, timeout=60)
     if not r.ok:
@@ -93,38 +152,20 @@ def post(mp4: str, brief: str, publish: bool = True) -> str:
     return mid
 
 
-def photo(url: str, brief: str) -> str:
-    """사진 게시물. 인스타는 사진을 '공개 주소'로만 받아 가서, 이 공개 저장소에 올린 jpg 주소를 넘긴다."""
-    tok = os.environ["IG_TOKEN"]
-    r = requests.post(f"{API}/{IG_USER}/media", data={"image_url": url, "caption": caption(brief), "access_token": tok}, timeout=60)
-    if not r.ok:
-        raise SystemExit(f"[인스타] 사진 컨테이너 실패: {r.status_code} {r.text[:400]}")
-    cid = r.json()["id"]
-    for _ in range(24):
-        s = requests.get(f"{API}/{cid}", params={"fields": "status_code", "access_token": tok}, timeout=30).json()
-        if s.get("status_code") == "FINISHED":
-            break
-        if s.get("status_code") in ("ERROR", "EXPIRED"):
-            raise SystemExit(f"[인스타] 사진 처리 실패: {s}")
-        time.sleep(5)
-    p = requests.post(f"{API}/{IG_USER}/media_publish", data={"creation_id": cid, "access_token": tok}, timeout=60)
-    if not p.ok:
-        raise SystemExit(f"[인스타] 사진 게시 실패: {p.status_code} {p.text[:300]}")
-    print("[인스타] 사진 게시 완료:", p.json().get("id"))
-    return p.json().get("id")
-
-
 def main(argv: list[str]) -> None:
-    if argv[1] == "video":
-        video(argv[2], argv[3])
-    elif argv[1] == "post":
-        post(argv[2], argv[3])
-    elif argv[1] == "test":
-        post(argv[2], argv[3], publish=False)
-    elif argv[1] == "photo":
-        photo(argv[2], argv[3])
-    elif argv[1] == "caption":
-        print(caption(argv[2]))
+    cmd, rest = argv[1], argv[2:]
+    if cmd == "video":
+        video(rest[0], rest[1])
+    elif cmd == "frame":
+        frame(rest[0], rest[1])
+    elif cmd == "post":
+        post(rest[0], rest[1], cap_file=rest[2] if len(rest) > 2 else None)
+    elif cmd == "test":
+        post(rest[0], rest[1], publish=False, cap_file=rest[2] if len(rest) > 2 else None)
+    elif cmd == "story":
+        story(rest[0])
+    elif cmd == "caption":
+        print(caption(rest[0], rest[1] if len(rest) > 1 else None))
 
 
 if __name__ == "__main__":
