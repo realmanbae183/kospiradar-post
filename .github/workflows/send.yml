@@ -51,7 +51,7 @@ jobs:
             echo "list=${{ inputs.day }}-${{ inputs.kind }}" >> "$GITHUB_OUTPUT"; echo "only=${{ inputs.only }}" >> "$GITHUB_OUTPUT"
           else
             if git cat-file -e "$BEFORE" 2>/dev/null; then RANGE="$BEFORE..HEAD"; else RANGE="HEAD~1..HEAD"; fi
-            L=$(git diff --name-only --diff-filter=A $RANGE -- posts/ | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}-(us|kr)' | tr '\n' ' ')
+            L=$(git diff --name-only --diff-filter=A $RANGE -- posts/ | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}-(us|kr)' | sort -u | tr '\n' ' ')
             echo "list=$L" >> "$GITHUB_OUTPUT"; echo "only=전부" >> "$GITHUB_OUTPUT"
           fi
       - name: 텔레그램
