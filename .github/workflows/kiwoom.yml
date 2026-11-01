@@ -1,0 +1,80 @@
+# 키움 커뮤니티용 글을 지훈 님 개인 텔레그램으로 보낸다 (공개 저장소라 GitHub 사용 시간 무료)
+#   kiwoom/날짜/번호-이름.png (그림) + 번호-이름.md (글)  → 번호 순서대로 그림 다음 글
+#   글은 매일 Claude 예약 작업이 비공개 레이더(kr-radar)의 재료를 보고 써서 여기에 올린다.
+#   받을 곳: Secrets 의 TG_ME (개인 대화 번호). 번호를 모르면 아래 '내 채팅 번호 찾기'를 실행.
+name: kiwoom
+
+on:
+  push:
+    branches: [main]
+    paths: ["kiwoom/**"]
+  workflow_dispatch:
+    inputs:
+      what:
+        description: "할 일"
+        type: choice
+        options: [내 채팅 번호 찾기, 다시 보내기]
+        default: 내 채팅 번호 찾기
+      day:
+        description: "다시 보낼 날짜 (예: 2026-11-02)"
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kiwoom
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 내 채팅 번호 찾기
+        if: github.event_name == 'workflow_dispatch' && inputs.what == '내 채팅 번호 찾기'
+        env:
+          TOK: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          echo "봇에게 개인 대화로 아무 말이나 보낸 뒤 이걸 실행하면, 아래에 번호가 나와요."
+          curl -sS "https://api.telegram.org/bot$TOK/getUpdates" | python3 -c '
+          import json,sys
+          d=json.load(sys.stdin); seen=set()
+          for u in d.get("result",[]):
+              m=u.get("message") or u.get("edited_message") or {}
+              c=m.get("chat") or {}
+              if c.get("type")=="private" and c["id"] not in seen:
+                  seen.add(c["id"]); print("채팅 번호:", c["id"], "/", c.get("first_name",""), c.get("username",""))
+                  print("::notice title=TG_ME 에 넣을 번호::%s" % c["id"])
+          if not seen: print("::warning::개인 대화가 안 보여요. 봇에게 먼저 아무 말이나 보내고 다시 실행하세요.")'
+      - name: 보낼 파일 찾기
+        id: f
+        if: github.event_name == 'push' || inputs.what == '다시 보내기'
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            L=$(ls kiwoom/${{ inputs.day }}/* 2>/dev/null | sort)
+          else
+            if git cat-file -e "$BEFORE" 2>/dev/null; then RANGE="$BEFORE..HEAD"; else RANGE="HEAD~1..HEAD"; fi
+            L=$(git diff --name-only --diff-filter=A $RANGE -- kiwoom/ | sort)
+          fi
+          echo "files<<EOF" >> "$GITHUB_OUTPUT"; echo "$L" >> "$GITHUB_OUTPUT"; echo "EOF" >> "$GITHUB_OUTPUT"
+      - name: 텔레그램 (개인 대화)
+        if: steps.f.outputs.files != ''
+        env:
+          TOK: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ME: ${{ secrets.TG_ME }}
+          FILES: ${{ steps.f.outputs.files }}
+        run: |
+          [ -z "$ME" ] && { echo "::error::Secrets에 TG_ME(개인 채팅 번호)가 없어요. '내 채팅 번호 찾기'로 번호를 알아낸 뒤 넣어 주세요."; exit 1; }
+          # 같은 번호의 그림 → 글 순서
+          for S in $(echo "$FILES" | sed -E 's/\.(png|md)$//' | awk '!x[$0]++'); do
+            [ -f "$S.png" ] && curl -sS -o /dev/null -w "그림 $S %{http_code}\n" -F chat_id="$ME" -F photo=@"$S.png" "https://api.telegram.org/bot$TOK/sendPhoto"
+            [ -f "$S.md" ] && curl -sS -o /dev/null -w "글 $S %{http_code}\n" --data-urlencode chat_id="$ME" --data-urlencode text@"$S.md" \
+              -d disable_web_page_preview=true "https://api.telegram.org/bot$TOK/sendMessage"
+            sleep 1
+          done
