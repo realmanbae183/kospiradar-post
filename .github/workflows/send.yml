@@ -61,7 +61,7 @@ jobs:
         run: |
           [ -z "$TOK" ] && { echo "::error::Secrets에 TELEGRAM_BOT_TOKEN 이 없어요"; exit 1; }
           for K in ${{ steps.f.outputs.list }}; do
-            [ -f "media/$K.png" ] && curl -sS -o /dev/null -w "사진 %{http_code}\n" -F chat_id="$TG_CHAT" -F photo=@"media/$K.png" "https://api.telegram.org/bot$TOK/sendPhoto"
+            [ -f "media/$K.png" ] && curl -sS -o /dev/null -w "사진 %{http_code}\n" --form-string chat_id="$TG_CHAT" -F photo=@"media/$K.png" "https://api.telegram.org/bot$TOK/sendPhoto"
             curl -sS -o /dev/null -w "글 %{http_code}\n" --data-urlencode chat_id="$TG_CHAT" --data-urlencode text@"posts/$K.md" \
               -d disable_web_page_preview=true "https://api.telegram.org/bot$TOK/sendMessage"
           done
