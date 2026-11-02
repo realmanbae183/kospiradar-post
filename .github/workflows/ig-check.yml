@@ -1,0 +1,31 @@
+# 인스타 토큰 상태 점검 (토큰 값은 출력하지 않고, 유효 여부·만료·권한만 본다)
+name: ig-check
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: 점검
+        env:
+          TOK: ${{ secrets.IG_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.parse, urllib.request, urllib.error
+          t = os.environ["TOK"]
+          API = "https://graph.facebook.com/v26.0"
+          def get(path, **q):
+              u = f"{API}/{path}?" + urllib.parse.urlencode(q)
+              try:
+                  return json.load(urllib.request.urlopen(u, timeout=30))
+              except urllib.error.HTTPError as e:
+                  return json.load(e)
+          d = get("debug_token", input_token=t, access_token=t)
+          keep = ("app_id","type","application","is_valid","expires_at","data_access_expires_at","scopes","user_id","profile_id","error")
+          print("debug_token:", json.dumps({k: v for k, v in d.get("data", d).items() if k in keep}, ensure_ascii=False))
+          print("me:", json.dumps(get("me", fields="id,name", access_token=t), ensure_ascii=False))
+          print("ig:", json.dumps(get("17841441575106165", fields="username", access_token=t), ensure_ascii=False))
+          PY
