@@ -21,7 +21,7 @@ on:
       only:
         description: "보낼 곳"
         type: choice
-        options: [전부, 텔레그램, 인스타, 인스타 시험(게시 안 함)]
+        options: [전부, 텔레그램, 인스타, 인스타2, 인스타 시험(게시 안 함)]
         default: 인스타 시험(게시 안 함)
 
 permissions:
@@ -66,7 +66,7 @@ jobs:
               -d disable_web_page_preview=true "https://api.telegram.org/bot$TOK/sendMessage"
           done
       - name: 인스타 (미장·국장 모두 · 릴스 1개 + 스토리 1개)
-        if: ${{ !cancelled() && steps.f.outputs.list != '' && steps.f.outputs.only != '텔레그램' }}
+        if: ${{ !cancelled() && steps.f.outputs.list != '' && steps.f.outputs.only != '텔레그램' && steps.f.outputs.only != '인스타2' }}
         env:
           IG_TOKEN: ${{ secrets.IG_TOKEN }}
           ONLY: ${{ steps.f.outputs.only }}
@@ -84,4 +84,17 @@ jobs:
             git add media/$K-story.jpg && git commit -q -m "스토리용 jpg $K" && git pull -q --rebase origin main && git push -q origin HEAD:main
             sleep 5
             python insta.py story "https://raw.githubusercontent.com/${{ github.repository }}/$(git rev-parse HEAD)/media/$K-story.jpg"
+          done
+      - name: 인스타2 (@burger_stock_index · 지표 기록용 릴스 1개, 보관 안 함)
+        if: ${{ !cancelled() && steps.f.outputs.list != '' && (steps.f.outputs.only == '전부' || steps.f.outputs.only == '인스타2' || steps.f.outputs.only == '') }}
+        env:
+          IG_TOKEN: ${{ secrets.IG_TOKEN2 }}
+          IG_USER: "17841470543082567"
+        run: |
+          [ -z "$IG_TOKEN" ] && { echo "::warning::IG_TOKEN2 없음 → 인스타2 건너뜀"; exit 0; }
+          pip install -q requests imageio-ffmpeg
+          for K in ${{ steps.f.outputs.list }}; do
+            [ -f "media/$K.png" ] || continue
+            [ -f /tmp/$K.mp4 ] || python insta.py video media/$K.png /tmp/$K.mp4
+            python insta.py post /tmp/$K.mp4 media/$K.json posts/$K.ig.txt
           done
