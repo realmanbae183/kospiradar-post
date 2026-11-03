@@ -59,6 +59,17 @@ def default_caption(b: dict) -> str:
             + KEEP + "\n\n" + TAGS["kr"])
 
 
+def _music_input(img: str, sec: int) -> list:
+    """assets/music/ 의 배경음(직접 만든 무저작권 비트) 중 하나를 날짜별로 돌려 쓴다. 없으면 무음."""
+    import glob, hashlib
+    here = os.path.dirname(os.path.abspath(__file__))
+    tracks = sorted(glob.glob(os.path.join(here, "assets", "music", "*.m4a")))
+    if not tracks:
+        return ["-f", "lavfi", "-t", str(sec), "-i", "anullsrc=channel_layout=stereo:sample_rate=44100"]
+    pick = tracks[int(hashlib.md5(os.path.basename(img).encode()).hexdigest(), 16) % len(tracks)]
+    return ["-t", str(sec), "-i", pick]
+
+
 def video(img: str, out: str, sec: int = 8) -> None:
     """정사각 그림을 흐린 배경 위에 가로 꽉 차게 올린 1080x1920 영상.
     글자가 뭉개지지 않게 움직임 없이 고정, 원본(3배 해상도)에서 한 번만 고품질로 줄이고 넉넉한 화질로 굽는다."""
@@ -71,7 +82,7 @@ def video(img: str, out: str, sec: int = 8) -> None:
           "[0:v]scale=1080:-2:flags=lanczos,unsharp=3:3:0.4[fg];"
           "[bg][fg]overlay=x=0:y='(H-h)/2',format=yuv420p[v]")
     cmd = [ff, "-y", "-loglevel", "error", "-loop", "1", "-framerate", "30", "-t", str(sec), "-i", img,
-           "-f", "lavfi", "-t", str(sec), "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+           *_music_input(img, sec),
            "-filter_complex", fc, "-map", "[v]", "-map", "1:a",
            "-c:v", "libx264", "-profile:v", "high", "-preset", "slow", "-tune", "stillimage", "-crf", "14",
            "-maxrate", "12M", "-bufsize", "24M", "-g", "30", "-r", "30",
