@@ -19,7 +19,7 @@ import time
 
 import requests
 
-IG_USER = os.environ.get("IG_USER") or "17841441575106165"   # 기본 @stock_burger_king, 두 번째 계정은 IG_USER=17841470543082567 (@burger_stock_index)
+IG_USER = os.environ.get("IG_USER") or "17841441575106165"   # 기본 @stock_burger_king, 두 번째 계정은 IG_USER=17841470543082567 (@stock_burger_index)
 API = "https://graph.facebook.com/v26.0"
 
 WEEK = "월화수목금토일"

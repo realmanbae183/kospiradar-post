@@ -102,7 +102,7 @@ jobs:
             sleep 5
             python insta.py story "https://raw.githubusercontent.com/${{ github.repository }}/$(git rev-parse HEAD)/media/$K-guru-story.jpg" || echo "::warning::구루 스토리 게시 실패"
           done
-      - name: 인스타2 (@burger_stock_index · 지표 기록용 릴스 1개, 보관 안 함)
+      - name: 인스타2 (@stock_burger_index · 지표 기록용 릴스 1개, 보관 안 함)
         if: ${{ !cancelled() && steps.f.outputs.list != '' && (steps.f.outputs.only == '전부' || steps.f.outputs.only == '인스타2' || steps.f.outputs.only == '') }}
         env:
           IG_TOKEN: ${{ secrets.IG_TOKEN2 }}
