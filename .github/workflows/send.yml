@@ -85,6 +85,23 @@ jobs:
             sleep 5
             python insta.py story "https://raw.githubusercontent.com/${{ github.repository }}/$(git rev-parse HEAD)/media/$K-story.jpg"
           done
+      - name: 인스타 스토리만 · 구루 명언 (국장 날, @stock_burger_king)
+        if: ${{ !cancelled() && steps.f.outputs.list != '' && steps.f.outputs.only != '텔레그램' && steps.f.outputs.only != '인스타2' && steps.f.outputs.only != '인스타 시험(게시 안 함)' }}
+        env:
+          IG_TOKEN: ${{ secrets.IG_TOKEN }}
+        run: |
+          [ -z "$IG_TOKEN" ] && { echo "::warning::IG_TOKEN 없음 → 구루 스토리 건너뜀"; exit 0; }
+          pip install -q requests pillow
+          git config user.name "kospiradar-bot"; git config user.email "actions@users.noreply.github.com"
+          for K in ${{ steps.f.outputs.list }}; do
+            case "$K" in *-kr) ;; *) continue ;; esac
+            G="kiwoom/${K%-kr}/90-guru.png"
+            [ -f "$G" ] || { echo "::warning::$G 없음 → 구루 스토리 건너뜀"; continue; }
+            python insta.py card "$G" media/$K-guru-story.jpg
+            git add media/$K-guru-story.jpg && git commit -q -m "구루 스토리용 jpg $K" && git pull -q --rebase origin main && git push -q origin HEAD:main
+            sleep 5
+            python insta.py story "https://raw.githubusercontent.com/${{ github.repository }}/$(git rev-parse HEAD)/media/$K-guru-story.jpg" || echo "::warning::구루 스토리 게시 실패"
+          done
       - name: 인스타2 (@burger_stock_index · 지표 기록용 릴스 1개, 보관 안 함)
         if: ${{ !cancelled() && steps.f.outputs.list != '' && (steps.f.outputs.only == '전부' || steps.f.outputs.only == '인스타2' || steps.f.outputs.only == '') }}
         env:

@@ -4,6 +4,7 @@ insta.py — 굿모닝 미장 · 오늘의 국장 그림을 인스타그램(@sto
   python insta.py frame out.mp4 out.jpg                      영상 한 장면 → 스토리용 9:16 jpg
   python insta.py post  out.mp4 media/날짜-kr.json [캡션파일] 릴스 올리기
   python insta.py story <공개 jpg 주소>                       스토리 올리기
+  python insta.py card in.png out.jpg                         아무 비율 그림 → 스토리용 9:16 jpg (비율 그대로, 위아래는 그림 배경색)
   python insta.py caption media/날짜-kr.json [캡션파일]       캡션 미리보기
 캡션은 매일 Claude 가 쓴 posts/날짜-kind.ig.txt 를 쓰고, 없으면 아래 기본 틀로 만든다.
 열쇠(IG_TOKEN)는 GitHub Secrets 에만 있다. 페이지 토큰이라 만료가 없다(단, 90일마다 데이터 접근 갱신 필요할 수 있음).
@@ -108,6 +109,18 @@ def frame(mp4: str, out: str) -> None:
     subprocess.run([ff, "-y", "-loglevel", "error", "-ss", "1", "-i", mp4, "-frames:v", "1", "-q:v", "2", out], check=True)
 
 
+def card(src: str, out: str) -> None:
+    """정사각형 등 아무 비율 그림을 자르지 않고 1080x1920 스토리 화면 가운데에 놓는다. 빈 곳은 그림 모서리 배경색 한 가지로 채움."""
+    from PIL import Image
+    im = Image.open(src).convert("RGB")
+    W, H = 1080, 1920
+    bg = Image.new("RGB", (W, H), im.getpixel((4, 4)))
+    w = W - 60                                   # 양옆 30px 여백
+    h = round(im.height * w / im.width)
+    bg.paste(im.resize((w, h), Image.LANCZOS), (30, (H - h) // 2))
+    bg.save(out, quality=92)
+
+
 def story(url: str) -> str:
     """스토리 (사진). 인스타는 '공개 주소'의 jpg 만 받아 간다."""
     tok = os.environ["IG_TOKEN"]
@@ -173,6 +186,8 @@ def main(argv: list[str]) -> None:
         post(rest[0], rest[1], cap_file=rest[2] if len(rest) > 2 else None)
     elif cmd == "test":
         post(rest[0], rest[1], publish=False, cap_file=rest[2] if len(rest) > 2 else None)
+    elif cmd == "card":
+        card(rest[0], rest[1])
     elif cmd == "story":
         story(rest[0])
     elif cmd == "caption":
