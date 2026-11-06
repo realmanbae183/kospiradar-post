@@ -113,19 +113,18 @@ def _music_input(img: str, sec: int) -> list:
 
 
 def video(img: str, out: str, sec: int = 8) -> None:
-    """시황 그림을 1080x1920 영상으로. 위아래는 그림 색이 그대로 이어지게 늘리고(tools/extend.py),
+    """시황 그림을 1080x1920 영상으로. 위아래는 그림 색이 그대로 이어지게 늘리고(tools/extend.py extend),
     글자가 뭉개지지 않게 움직임 없이 고정, 넉넉한 화질로 굽는다. 배경음은 그날 시장 분위기에 맞춰 고른다."""
     import shutil
     import tempfile
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
-    from extend import compose
+    from extend import extend
     ff = shutil.which("ffmpeg")
     if not ff:                                 # GitHub 실행기에 ffmpeg 가 없으면 파이썬 패키지에 든 것을 쓴다
         import imageio_ffmpeg
         ff = imageio_ffmpeg.get_ffmpeg_exe()
     tall = os.path.join(tempfile.gettempdir(), os.path.basename(img) + ".tall.png")
-    head, sub = headline_of(img)
-    compose(img, tall, head, sub)
+    extend(img, tall)
     cmd = [ff, "-y", "-loglevel", "error", "-loop", "1", "-framerate", "30", "-t", str(sec), "-i", tall,
            *_music_input(img, sec),
            "-filter_complex", "[0:v]format=yuv420p[v];[1:a]afade=t=out:st=%s:d=1.5[a]" % (sec - 1.5),
