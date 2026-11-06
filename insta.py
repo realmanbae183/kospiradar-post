@@ -60,11 +60,52 @@ def default_caption(b: dict) -> str:
             + KEEP + "\n\n" + TAGS["kr"])
 
 
+def mood_of(img: str) -> str:
+    """그날 시장 분위기: up(올랐다) / calm(보합) / down(내렸다). 재료 json 의 지수 등락률로 정한다."""
+    jp = os.path.splitext(img)[0] + ".json"
+    try:
+        b = json.load(open(jp, encoding="utf-8"))
+        if "us" in b:
+            ps = [x.get("p") for x in b["us"].get("idx", [])]
+        else:
+            t = b.get("today") or b
+            ps = [x.get("p") for x in t.get("idx", []) if x.get("n") in ("코스피", "코스닥")] or \
+                 [x.get("p") for x in t.get("idx", [])]
+        ps = [p for p in ps if p is not None]
+        avg = sum(ps) / len(ps)
+    except Exception:
+        return "calm"
+    return "up" if avg >= 0.4 else "down" if avg <= -0.4 else "calm"
+
+
+def headline_of(img: str) -> tuple[str, str]:
+    """영상 위쪽 큰 글자: 국장은 '코스피 -5.28%', 미장은 '나스닥 +1.44%'. 둘째 줄은 날짜·종류·마감 분위기."""
+    from datetime import date as _d
+    jp = os.path.splitext(img)[0] + ".json"
+    base = os.path.basename(img)
+    try:
+        b = json.load(open(jp, encoding="utf-8"))
+        if "us" in b:
+            y, m, d = map(int, str(b["date"]).split("-"))
+            ix = {x["n"]: x.get("p") for x in b["us"].get("idx", [])}
+            name, p, kind = "나스닥", ix.get("나스닥 종합"), "굿모닝 미장"
+        else:
+            y, m, d = map(int, base[:10].split("-"))
+            t = b.get("today") or b
+            ix = {x["n"]: x.get("p") for x in t.get("idx", [])}
+            name, p, kind = "코스피", ix.get("코스피"), "오늘의 국장"
+        word = "보합" if p is None or abs(p) < 0.05 else "상승" if p > 0 else "하락"
+        head = f"{name} {p:+.2f}%" if p is not None else kind
+        return head, f"{m}월 {d}일 ({WEEK[_d(y, m, d).weekday()]}) · {kind} · {word} 마감"
+    except Exception:
+        return "시황 한눈에", ""
+
+
 def _music_input(img: str, sec: int) -> list:
-    """assets/music/ 의 배경음(직접 만든 무저작권 비트) 중 하나를 날짜별로 돌려 쓴다. 없으면 무음."""
+    """assets/music/{up,calm,down}/ 에서 그날 분위기에 맞는 곡을 날짜별로 돌려 쓴다. 없으면 무음."""
     import glob, hashlib
     here = os.path.dirname(os.path.abspath(__file__))
-    tracks = sorted(glob.glob(os.path.join(here, "assets", "music", "*.m4a")))
+    tracks = sorted(glob.glob(os.path.join(here, "assets", "music", mood_of(img), "*.m4a")))
     if not tracks:
         return ["-f", "lavfi", "-t", str(sec), "-i", "anullsrc=channel_layout=stereo:sample_rate=44100"]
     pick = tracks[int(hashlib.md5(os.path.basename(img).encode()).hexdigest(), 16) % len(tracks)]
@@ -72,19 +113,23 @@ def _music_input(img: str, sec: int) -> list:
 
 
 def video(img: str, out: str, sec: int = 8) -> None:
-    """정사각 그림을 흐린 배경 위에 가로 꽉 차게 올린 1080x1920 영상.
-    글자가 뭉개지지 않게 움직임 없이 고정, 원본(3배 해상도)에서 한 번만 고품질로 줄이고 넉넉한 화질로 굽는다."""
+    """시황 그림을 1080x1920 영상으로. 위아래는 그림 색이 그대로 이어지게 늘리고(tools/extend.py),
+    글자가 뭉개지지 않게 움직임 없이 고정, 넉넉한 화질로 굽는다. 배경음은 그날 시장 분위기에 맞춰 고른다."""
     import shutil
+    import tempfile
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
+    from extend import compose
     ff = shutil.which("ffmpeg")
     if not ff:                                 # GitHub 실행기에 ffmpeg 가 없으면 파이썬 패키지에 든 것을 쓴다
         import imageio_ffmpeg
         ff = imageio_ffmpeg.get_ffmpeg_exe()
-    fc = ("[0:v]scale=1080:1920:force_original_aspect_ratio=increase:flags=bicubic,crop=1080:1920,boxblur=40:2,eq=brightness=-0.06[bg];"
-          "[0:v]scale=1080:-2:flags=lanczos,unsharp=3:3:0.4[fg];"
-          "[bg][fg]overlay=x=0:y='(H-h)/2',format=yuv420p[v]")
-    cmd = [ff, "-y", "-loglevel", "error", "-loop", "1", "-framerate", "30", "-t", str(sec), "-i", img,
+    tall = os.path.join(tempfile.gettempdir(), os.path.basename(img) + ".tall.png")
+    head, sub = headline_of(img)
+    compose(img, tall, head, sub)
+    cmd = [ff, "-y", "-loglevel", "error", "-loop", "1", "-framerate", "30", "-t", str(sec), "-i", tall,
            *_music_input(img, sec),
-           "-filter_complex", fc, "-map", "[v]", "-map", "1:a",
+           "-filter_complex", "[0:v]format=yuv420p[v];[1:a]afade=t=out:st=%s:d=1.5[a]" % (sec - 1.5),
+           "-map", "[v]", "-map", "[a]",
            "-c:v", "libx264", "-profile:v", "high", "-preset", "slow", "-tune", "stillimage", "-crf", "14",
            "-maxrate", "12M", "-bufsize", "24M", "-g", "30", "-r", "30",
            "-c:a", "aac", "-b:a", "128k", "-shortest", "-movflags", "+faststart", out]

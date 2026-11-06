@@ -65,6 +65,9 @@ jobs:
             curl -sS -o /dev/null -w "글 %{http_code}\n" --data-urlencode chat_id="$TG_CHAT" --data-urlencode text@"posts/$K.md" \
               -d disable_web_page_preview=true "https://api.telegram.org/bot$TOK/sendMessage"
           done
+      - name: 영상에 쓸 한글 글꼴 설치
+        if: ${{ steps.f.outputs.list != '' && steps.f.outputs.only != '텔레그램' }}
+        run: sudo apt-get install -y -qq fonts-noto-cjk >/dev/null
       - name: 인스타 (미장·국장 모두 · 릴스 1개 + 스토리 1개)
         if: ${{ !cancelled() && steps.f.outputs.list != '' && steps.f.outputs.only != '텔레그램' && steps.f.outputs.only != '인스타2' }}
         env:
@@ -72,7 +75,7 @@ jobs:
           ONLY: ${{ steps.f.outputs.only }}
         run: |
           [ -z "$IG_TOKEN" ] && { echo "::error::Secrets에 IG_TOKEN 이 없어요"; exit 1; }
-          pip install -q requests imageio-ffmpeg
+          pip install -q requests imageio-ffmpeg pillow numpy scipy
           git config user.name "kospiradar-bot"; git config user.email "actions@users.noreply.github.com"
           for K in ${{ steps.f.outputs.list }}; do
             [ -f "media/$K.png" ] || { echo "::warning::media/$K.png 없음 → 인스타 건너뜀"; continue; }
@@ -109,7 +112,7 @@ jobs:
           IG_USER: "17841470543082567"
         run: |
           [ -z "$IG_TOKEN" ] && { echo "::warning::IG_TOKEN2 없음 → 인스타2 건너뜀"; exit 0; }
-          pip install -q requests imageio-ffmpeg
+          pip install -q requests imageio-ffmpeg pillow numpy scipy
           for K in ${{ steps.f.outputs.list }}; do
             [ -f "media/$K.png" ] || continue
             [ -f /tmp/$K.mp4 ] || python insta.py video media/$K.png /tmp/$K.mp4
