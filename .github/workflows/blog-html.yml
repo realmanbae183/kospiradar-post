@@ -1,0 +1,55 @@
+# 블로그 서식본(.html)을 버거대왕 수집함 대화방으로 파일로 보낸다.
+#   blog/날짜/*.html 이 새로 올라오면 자동으로, 또는 아래 '다시 보내기'로 수동 실행.
+#   필요한 Secrets: TG_INBOX_TOKEN (수집함 봇 토큰), TG_INBOX_CHAT (수집함 대화방 번호 = 지훈 텔레그램 숫자 ID)
+#   둘 중 하나라도 없으면 아무것도 하지 않고 넘어간다.
+name: blog-html
+
+on:
+  push:
+    branches: [main]
+    paths: ["blog/**/*.html"]
+  workflow_dispatch:
+    inputs:
+      day:
+        description: "다시 보낼 날짜 (예: 2026-11-09)"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: blog-html
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 보낼 파일 찾기
+        id: f
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            L=$(ls blog/${{ inputs.day }}/*.html 2>/dev/null | sort)
+          else
+            if git cat-file -e "$BEFORE" 2>/dev/null; then RANGE="$BEFORE..HEAD"; else RANGE="HEAD~1..HEAD"; fi
+            L=$(git diff --name-only --diff-filter=A $RANGE -- 'blog/*.html' 'blog/**/*.html' | sort)
+          fi
+          echo "files<<EOF" >> "$GITHUB_OUTPUT"; echo "$L" >> "$GITHUB_OUTPUT"; echo "EOF" >> "$GITHUB_OUTPUT"
+      - name: 수집함 대화방으로 보내기
+        if: steps.f.outputs.files != ''
+        env:
+          TOK: ${{ secrets.TG_INBOX_TOKEN }}
+          CHAT: ${{ secrets.TG_INBOX_CHAT }}
+          FILES: ${{ steps.f.outputs.files }}
+        run: |
+          if [ -z "$TOK" ] || [ -z "$CHAT" ]; then echo "::warning::TG_INBOX_TOKEN / TG_INBOX_CHAT 가 아직 없어서 보내지 않았어요."; exit 0; fi
+          for F in $FILES; do
+            curl -sS -o /dev/null -w "파일 $F %{http_code}\n" -F chat_id="$CHAT" -F document=@"$F" "https://api.telegram.org/bot$TOK/sendDocument"
+            sleep 1
+          done
