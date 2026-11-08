@@ -50,6 +50,6 @@ jobs:
         run: |
           if [ -z "$TOK" ] || [ -z "$CHAT" ]; then echo "::warning::TG_INBOX_TOKEN / TG_INBOX_CHAT 가 아직 없어서 보내지 않았어요."; exit 0; fi
           for F in $FILES; do
-            curl -sS -o /dev/null -w "파일 $F %{http_code}\n" -F chat_id="$CHAT" -F document=@"$F" "https://api.telegram.org/bot$TOK/sendDocument"
+            R=$(curl -sS -w " [%{http_code}]" -F chat_id="$CHAT" -F document=@"$F" "https://api.telegram.org/bot$TOK/sendDocument"); echo "파일 $F ${R:0:160}"
             sleep 1
           done
