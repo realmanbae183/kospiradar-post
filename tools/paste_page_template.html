@@ -1,0 +1,64 @@
+<title>블로그 붙여넣기</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* layout: one column, tabs on top, white "paper" with the post exactly as it pastes into Naver */
+:root{--bg:#eef0ec;--fg:#1d2420;--muted:#5f6b63;--line:#c9cfc8;--accent:#03a94e;--card:#ffffff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#161a17;--fg:#e8ece9;--muted:#9aa59e;--line:#333b35;--accent:#2fd17a;--card:#ffffff;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#161a17;--fg:#e8ece9;--muted:#9aa59e;--line:#333b35;--accent:#2fd17a;--card:#ffffff;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:'Nanum Gothic','Apple SD Gothic Neo','Malgun Gothic',sans-serif;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-size:20px;margin:0}
+.hint{color:var(--muted);font-size:13px;margin:0;line-height:1.6}
+.tabs{display:flex;flex-wrap:wrap;gap:8px}
+.tab{border:1px solid var(--line);background:transparent;color:var(--fg);padding:8px 14px;border-radius:999px;font:inherit;font-size:14px;cursor:pointer}
+.tab.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+.post{display:flex;flex-direction:column;gap:10px}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.lbl{font-size:13px;color:var(--muted);font-weight:700}
+.copy{border:1px solid var(--accent);background:transparent;color:var(--accent);padding:8px 14px;border-radius:8px;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.copy.primary{background:var(--accent);color:#fff}
+.copy:focus-visible,.tab:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.titlebox{background:var(--card);color:#000;border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:17px;font-weight:700;line-height:1.5}
+.paper{font-weight:normal;background:var(--card);color:#000;border:1px solid var(--line);border-radius:8px;padding:22px 20px;line-height:1.8;min-width:0;overflow-wrap:anywhere}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px}
+</style>
+<div class="wrap">
+<h1>@@DATE@@ 블로그 글 3편</h1>
+<p class="hint">버튼을 누르면 서식째로 복사됩니다. 네이버 글쓰기에서 제목칸엔 제목, 본문엔 본문을 Ctrl+V 하세요. 【 사진 자리 】 에 사진 모음의 같은 번호 사진을 넣으면 됩니다.</p>
+<div class="tabs"><button class="tab on" data-i="0" id="tab0">① 국장 정리</button><button class="tab" data-i="1" id="tab1">② 예상과 피드백</button><button class="tab" data-i="2" id="tab2">③ 추가 공부</button></div>
+<section class="post" data-i="0" >
+<div class="bar"><span class="lbl">제목</span><button class="copy" data-t="t0">제목 복사</button></div>
+<div class="titlebox" id="t0">@@TITLE0@@</div>
+<div class="bar"><span class="lbl">본문 (서식 포함)</span><button class="copy primary" data-t="b0">본문 전체 복사</button></div>
+<div class="paper" id="b0">@@BODY0@@</div>
+</section><section class="post" data-i="1" hidden>
+<div class="bar"><span class="lbl">제목</span><button class="copy" data-t="t1">제목 복사</button></div>
+<div class="titlebox" id="t1">@@TITLE1@@</div>
+<div class="bar"><span class="lbl">본문 (서식 포함)</span><button class="copy primary" data-t="b1">본문 전체 복사</button></div>
+<div class="paper" id="b1">@@BODY1@@</div>
+</section><section class="post" data-i="2" hidden>
+<div class="bar"><span class="lbl">제목</span><button class="copy" data-t="t2">제목 복사</button></div>
+<div class="titlebox" id="t2">@@TITLE2@@</div>
+<div class="bar"><span class="lbl">본문 (서식 포함)</span><button class="copy primary" data-t="b2">본문 전체 복사</button></div>
+<div class="paper" id="b2">@@BODY2@@</div>
+</section>
+</div>
+<div class="toast" id="toast" hidden>복사됨</div>
+<script>
+const tabs=[...document.querySelectorAll('.tab')],secs=[...document.querySelectorAll('.post')];
+tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.toggle('on',x===t));secs.forEach(s=>s.hidden=s.dataset.i!==t.dataset.i);}));
+function toast(m){const e=document.getElementById('toast');e.textContent=m;e.hidden=false;clearTimeout(window._t);window._t=setTimeout(()=>e.hidden=true,1800);}
+function selectEl(el){const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);}
+document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',async()=>{
+  const el=document.getElementById(b.dataset.t);
+  const isTitle=b.dataset.t.startsWith('t');
+  try{
+    if(isTitle){await navigator.clipboard.writeText(el.innerText.trim());}
+    else{await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([el.innerHTML],{type:'text/html'}),'text/plain':new Blob([el.innerText],{type:'text/plain'})})]);}
+    toast(isTitle?'제목 복사됨':'본문 복사됨 (서식 포함)');
+  }catch(e){
+    selectEl(el);let ok=false;try{ok=document.execCommand('copy');}catch(_){}
+    toast(ok?(isTitle?'제목 복사됨':'본문 복사됨 (서식 포함)'):'선택해 뒀습니다. Ctrl+C 를 눌러 주세요');
+  }
+}));
+</script>
