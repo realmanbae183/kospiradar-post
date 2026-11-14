@@ -1,4 +1,4 @@
-"""블로그 글 렌더러. render(name,title,blocks,tags) -> OUT/name.html/.txt/.md + OUT/img/name/. blocks: ("key"|"topic"|"p"|"sky"|"hr"|"img",text[,label]).
+"""블로그 글 렌더러. render(name,title,blocks,tags) -> OUT/name.html/.txt/.md/.seq.json + OUT/img/name/. blocks: ("key"|"topic"|"p"|"sky"|"hr"|"img",text[,label]).
 환경변수 BLOG_OUT 으로 출력 폴더 지정. 서식 규칙은 예약 작업 지시문 참고."""
 import sys,html,io,base64,os
 from PIL import Image
@@ -11,7 +11,9 @@ def emb(path):
     b=io.BytesIO(); im.save(b,"JPEG",quality=82); return "data:image/jpeg;base64,"+base64.b64encode(b.getvalue()).decode()
 def render(name,title,blocks,tags):
     import shutil
-    cnt=[0]; t=[]
+    cnt=[0]; t=[]; seq=[{"type":"text","text":title}]; buf=[]
+    def flush():
+        if buf: seq.append({"type":"text","text":"\u200b\n"+"\n\n".join(buf)}); buf.clear()
     SP='<p style="margin:0;"><span style="font-size:15px;font-weight:normal;">&nbsp;</span></p>'
     def lines(x,size,color="#000",bold=False,bg=None,center=False):
         out=[]
@@ -27,17 +29,20 @@ def render(name,title,blocks,tags):
     h.append('<div id="post">')
     for b in blocks:
         k=b[0]; x=b[1] if len(b)>1 else ""
-        if k=="key": h+= [lines(x,24,bold=True,bg="#fff59d"),SP]; t.append(x)
-        elif k=="topic": h+= [lines(x,19,bold=True,bg="#c8f7c5"),SP]; t.append(x)
-        elif k=="p": h+= [lines(x,15),SP]; t.append(x)
-        elif k=="sky": h+= [lines(x,15,color="#2b8fd9"),SP]; t.append(x)
-        elif k=="hr": h+= [SP,lines("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",13,color="#999"),SP]; t.append("")
+        if k=="key": h+= [lines(x,24,bold=True,bg="#fff59d"),SP]; t.append(x); buf.append(x)
+        elif k=="topic": h+= [lines(x,19,bold=True,bg="#c8f7c5"),SP]; t.append(x); buf.append(x)
+        elif k=="p": h+= [lines(x,15),SP]; t.append(x); buf.append(x)
+        elif k=="sky": h+= [lines(x,15,color="#2b8fd9"),SP]; t.append(x); buf.append(x)
+        elif k=="hr": h+= [SP,lines("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",13,color="#999"),SP]; t.append(""); buf.append("━━━━━━━━━━━━")
         elif k=="img":
             os.makedirs(f"{OUT}/img/{name}",exist_ok=True); cnt[0]+=1
             ext=os.path.splitext(x)[1]; fn=f"{cnt[0]:02d}-{b[2].replace(' ','-')}{ext}"; shutil.copy(x,f"{OUT}/img/{name}/{fn}")
             h+= [lines(f"【 사진 자리 · {b[2]} 】  ({fn})",14,color="#777",bold=True,center=True),SP]; t.append(f"[사진 자리 · {b[2]}]")
+            flush(); seq.append({"type":"photo","path":f"img/{name}/{fn}"})
     h+= [lines(DIS,15),SP,lines(tags,13,color="#555"),'</div></body>']
     open(f"{OUT}/{name}.html","w").write("\n".join(h))
+    buf+= [DIS,tags]; flush()
+    import json; json.dump(seq,open(f"{OUT}/{name}.seq.json","w"),ensure_ascii=False,indent=0)   # 수집함에 순서대로 보낼 목록 (제목 → 글 → 사진 → 글 …)
     body="\n\n".join(s for s in t if s)
     open(f"{OUT}/{name}.txt","w").write(f"{title}\n\n{body}\n\n{DIS}\n\n{tags}\n")
     open(f"{OUT}/{name}.md","w").write(f"{title}\n\n{body}\n\n{DIS}\n")

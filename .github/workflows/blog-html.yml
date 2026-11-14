@@ -1,4 +1,4 @@
-# 블로그 서식본(.html)을 버거대왕 수집함 대화방으로 파일로 보낸다.
+# 블로그 서식본(.html)을 버거대왕 수집함 대화방으로 파일로 보내고, 이어서 제목 → 글 → 사진 → 글 순서로 하나씩 보낸다.
 #   blog/날짜/*.html 이 새로 올라오면 자동으로, 또는 아래 '다시 보내기'로 수동 실행.
 #   필요한 Secrets: TG_INBOX_TOKEN (수집함 봇 토큰), TG_INBOX_CHAT (수집함 대화방 번호 = 지훈 텔레그램 숫자 ID)
 #   둘 중 하나라도 없으면 아무것도 하지 않고 넘어간다.
@@ -49,7 +49,11 @@ jobs:
           FILES: ${{ steps.f.outputs.files }}
         run: |
           if [ -z "$TOK" ] || [ -z "$CHAT" ]; then echo "::warning::TG_INBOX_TOKEN / TG_INBOX_CHAT 가 아직 없어서 보내지 않았어요."; exit 0; fi
+          pip install -q requests
           for F in $FILES; do
             R=$(curl -sS -w " [%{http_code}]" -F chat_id="$CHAT" -F document=@"$F" "https://api.telegram.org/bot$TOK/sendDocument"); echo "파일 $F ${R:0:160}"
             sleep 1
+            # 그다음 블로그에 붙이는 순서 그대로: 제목 → 글 → 사진 → 글 …
+            Q="${F%.html}.seq.json"
+            [ -f "$Q" ] && TOK="$TOK" python3 tools/tg_send.py seq "$CHAT" "$Q" "$(dirname "$F")"
           done

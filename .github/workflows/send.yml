@@ -1,7 +1,7 @@
 # posts/ 에 새 시황 글이 올라오면 보낸다 (공개 저장소라 GitHub 사용 시간 무료)
 #   posts/날짜-us.md · 날짜-kr.md  (텔레그램 글)  +  posts/날짜-*.ig.txt (인스타 캡션)
 #   media/날짜-us.png · 날짜-kr.png (그림)  +  media/날짜-*.json (재료)
-#   → 텔레그램 (그림 + 글),  인스타 릴스 1개 + 스토리 1개
+#   → 텔레그램 (사진 → 제목 → 본문),  인스타 릴스 1개 + 스토리 1개 (+ 국장 날은 구루 스토리, media/날짜-kr-guru.png)
 # 글과 그림은 매일 Claude 예약 작업이 비공개 레이더(kr-radar)의 재료를 보고 만들어 여기에 올린다.
 name: send
 
@@ -60,10 +60,9 @@ jobs:
           TOK: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           [ -z "$TOK" ] && { echo "::error::Secrets에 TELEGRAM_BOT_TOKEN 이 없어요"; exit 1; }
+          pip install -q requests
           for K in ${{ steps.f.outputs.list }}; do
-            [ -f "media/$K.png" ] && curl -sS -o /dev/null -w "사진 %{http_code}\n" --form-string chat_id="$TG_CHAT" -F photo=@"media/$K.png" "https://api.telegram.org/bot$TOK/sendPhoto"
-            curl -sS -o /dev/null -w "글 %{http_code}\n" --data-urlencode chat_id="$TG_CHAT" --data-urlencode text@"posts/$K.md" \
-              -d disable_web_page_preview=true "https://api.telegram.org/bot$TOK/sendMessage"
+            python3 tools/tg_send.py post "$TG_CHAT" "posts/$K.md" "media/$K.png"     # 사진 → 제목 → 본문
           done
       - name: 인스타 (미장·국장 모두 · 릴스 1개 + 스토리 1개)
         if: ${{ !cancelled() && steps.f.outputs.list != '' && steps.f.outputs.only != '텔레그램' && steps.f.outputs.only != '인스타2' }}
@@ -95,7 +94,7 @@ jobs:
           git config user.name "kospiradar-bot"; git config user.email "actions@users.noreply.github.com"
           for K in ${{ steps.f.outputs.list }}; do
             case "$K" in *-kr) ;; *) continue ;; esac
-            G="kiwoom/${K%-kr}/90-guru.png"
+            G="media/$K-guru.png"; [ -f "$G" ] || G="kiwoom/${K%-kr}/70-guru.png"; [ -f "$G" ] || G="kiwoom/${K%-kr}/90-guru.png"
             [ -f "$G" ] || { echo "::warning::$G 없음 → 구루 스토리 건너뜀"; continue; }
             python insta.py card "$G" media/$K-guru-story.jpg
             git add media/$K-guru-story.jpg && git commit -q -m "구루 스토리용 jpg $K" && git pull -q --rebase origin main && git push -q origin HEAD:main
