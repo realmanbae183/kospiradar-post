@@ -227,6 +227,11 @@ def build_facts(work: str) -> dict:
             facts["sigs"].append({"n": n, **{k: s.get(k) for k in ("name", "close", "chg_pct", "overlap", "flags", "rsi", "gap_from_ma20_pct",
                                                                      "depth", "trend120_up", "market_breadth_pct", "grade", "grade_up_reason",
                                                                      "past_same_state", "verdict", "image", "rank_by_marcap")}})
+        dmap = {it["name"]: it["today"] for it in (d or {}).get("items", [])}
+        for x in facts["sigs"]:                     # 레이더 종가가 데일리(KRX) 종가와 다르면 그 신호는 올리지 않는다
+            t = dmap.get(x["name"])
+            if t and (round(t["close"]) != round(x["close"] or 0) or round(t["chg_pct"], 2) != round(x["chg_pct"] or 0, 2)):
+                x["mismatch"] = f"레이더 {x['close']}/{x['chg_pct']}% vs 데일리 {t['close']}/{t['chg_pct']}%"
         facts["new_os_total"] = sg.get("new_os_total")
         q = sg.get("quote") or {}
         facts["guru"] = {"text": q.get("text"), "who": q.get("who")}
@@ -278,7 +283,7 @@ def facts_text(F: dict) -> str:
         o.append(f"━━ [sig{s['n']}] {s['name']} {s['grade']}등급({s['verdict']}) 종가 {won(s['close'])}원 {s['chg_pct']:+.2f}% 겹친 조건 {s['overlap']}개 {s['flags']} "
                  f"RSI {s['rsi']} 20일선 거리 {s['gap_from_ma20_pct']}% ({s['depth']}) 120일선 {'오름' if s['trend120_up'] else '내림'} "
                  f"시장 폭 {s['market_breadth_pct']}% 과거 {ps.get('count')}번 5일 {ps.get('win5_pct')}%/{ps.get('avg5_pct')}% 20일 {ps.get('win20_pct')}%/{ps.get('avg20_pct')}% "
-                 f"등급 이유 {s['grade_up_reason']} 시총 순위 {s['rank_by_marcap']}")
+                 f"등급 이유 {s['grade_up_reason']} 시총 순위 {s['rank_by_marcap']}" + (f"  ※ 시세 불일치 → 글 쓰지 말 것 ({s['mismatch']})" if s.get("mismatch") else ""))
     if F["sigs"]:
         o.append(f"오늘 새 과매도 종목 {F.get('new_os_total')}개\n")
     if F.get("guru"):
@@ -471,6 +476,8 @@ def cmd_build(work: str, slots_path: str, kp: str, what: str = "all") -> None:
                 probs.append(f"{s['name']} 내일 예상 칸(fc_first)이 비어 있음")
         # 과매도
         for s in F["sigs"]:
+            if s.get("mismatch"):
+                probs.append(f"레이더 {s['name']} 시세 불일치로 안 올림 ({s['mismatch']}) → PushNotification 으로 알리기"); continue
             sl = (S.get("sigs") or {}).get(str(s["n"])) or {}
             if not sl.get("first"):
                 probs.append(f"레이더 {s['name']} 칸(first)이 비어 있음"); continue
