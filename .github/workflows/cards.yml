@@ -1,5 +1,5 @@
 # 카드뉴스 완성본을 지훈 님 개인 텔레그램(TG_ME)으로 보낸다.
-#   cards/날짜-이름/ 안에 01.jpg~10.jpg 를 만들고, 마지막에 send.txt(첫 줄 아무 글) 를 올리면 그 폴더를 보낸다.
+#   cards/날짜-이름/ 안에 01.jpg~ 를(10장 넘으면 나눠서) 만들고, 마지막에 send.txt(첫 줄 아무 글) 를 올리면 그 폴더를 보낸다.
 #   caption.txt 가 있으면 인스타 캡션으로 사진 뒤에 따로 보낸다.
 name: cards
 on:
@@ -39,14 +39,19 @@ jobs:
           tok, me = os.environ["TOK"], os.environ["ME"]
           api = f"https://api.telegram.org/bot{tok}/"
           for d in os.environ["DIRS"].split():
-              pics = sorted(glob.glob(f"{d}/[0-9][0-9].jpg"))[:10]
-              media, files = [], {}
-              for i, p in enumerate(pics):
-                  files[f"p{i}"] = open(p, "rb")
-                  media.append({"type": "photo", "media": f"attach://p{i}"})
-              r = requests.post(api + "sendMediaGroup", data={"chat_id": me, "media": json.dumps(media)}, files=files, timeout=120)
-              print(d, "사진", len(pics), r.status_code, r.text[:200] if r.status_code != 200 else "")
-              time.sleep(1.5)
+              allpics = sorted(glob.glob(f"{d}/[0-9][0-9].jpg"))
+              for k in range(0, len(allpics), 10):                # 텔레그램 묶음은 10장까지라 10장씩 나눠 보낸다
+                  pics = allpics[k:k + 10]
+                  media, files = [], {}
+                  for i, p in enumerate(pics):
+                      files[f"p{i}"] = open(p, "rb")
+                      media.append({"type": "photo", "media": f"attach://p{i}"})
+                  if len(pics) == 1:
+                      r = requests.post(api + "sendPhoto", data={"chat_id": me}, files={"photo": files["p0"]}, timeout=120)
+                  else:
+                      r = requests.post(api + "sendMediaGroup", data={"chat_id": me, "media": json.dumps(media)}, files=files, timeout=120)
+                  print(d, "사진", k + 1, "~", k + len(pics), r.status_code, r.text[:200] if r.status_code != 200 else "")
+                  time.sleep(1.5)
               cap = f"{d}/caption.txt"
               if os.path.exists(cap):
                   t = open(cap, encoding="utf-8").read()

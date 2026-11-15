@@ -302,7 +302,13 @@ def outro(spec, n) -> Image.Image:
     fs, ss = fit(dr, [sub], "Bold", 48, W - 140, 30)
     center(dr, y + 4, sub, fs, "#555555")
     y += ss + 36
-    im = character(o.get("char", "bd25_팔로우부탁"), min(H - y - 60, 900), cut_bg=True)
+    box = min(H - y - 60, 900)
+    if o.get("photo"):                                  # 캐릭터 그림을 사진 파일로 줄 때 (흰 바탕 PNG)
+        pp = os.path.join(PHOTO_DIR[0], o["photo"])
+        im = Image.open(pp).convert("RGBA")
+        im.thumbnail((box, box), Image.LANCZOS)
+    else:
+        im = character(o.get("char", "bd25_팔로우부탁"), box, cut_bg=True)
     c.paste(im, ((W - im.width) // 2, H - im.height - 50), im)
     fn = font("Regular", 22)
     center(dr, H - 42, "개인 기록이며 매수·매도 권유가 아닙니다. 투자 판단과 책임은 본인에게 있습니다.", fn, GREY)
@@ -312,8 +318,8 @@ def outro(spec, n) -> Image.Image:
 def check(spec) -> list[str]:
     """틀이 무너지는 글을 미리 잡는다."""
     bad = []
-    if not 4 <= len(spec["slides"]) <= 8:
-        bad.append(f"가운데 장은 4~8장 (지금 {len(spec['slides'])}장)")
+    if not 4 <= len(spec["slides"]) <= 12:
+        bad.append(f"가운데 장은 4~12장 (지금 {len(spec['slides'])}장)")
     for i, sl in enumerate(spec["slides"], 2):
         if len(sl["top"]) > 18:
             bad.append(f"{i}장 윗줄이 깁니다({len(sl['top'])}자, 18자 이내)")
