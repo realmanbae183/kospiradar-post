@@ -345,10 +345,14 @@ def cmd_cards(work: str) -> None:
             t = (j.get("text") or "").replace("\n", " ")
             star = bool(re.search(r"이슈\s*카드|카드\s*뉴스|카드로|카드 만들", t))
             photo_tag = t.strip().startswith("사진")
+            m = re.match(r"\s*(삼전|삼성|하닉|하이닉스|코스피)\s*표지", t)
+            if m and img:
+                photo_tag = "표지:" + {"삼전": "samsung", "삼성": "samsung", "하닉": "hynix", "하이닉스": "hynix", "코스피": "kospi"}[m.group(1)]
             rows.append((not star, j["received"], f"{dd}_{stem}", star, photo_tag, img, t[:90]))
     rows.sort()
     for _, rec, name, star, ph, img, t in rows:
-        print(("★ " if star else "  ") + ("[사진] " if ph else "") + f"{name} {rec[11:16]} " + ("그림있음 " if img else "") + t)
+        tag = f"[{ph}] " if isinstance(ph, str) else ("[사진] " if ph else "")
+        print(("★ " if star else "  ") + tag + f"{name} {rec[11:16]} " + ("그림있음 " if img else "") + t)
     print(f"원문 {len(rows)}개 ({cut:%m/%d %H:%M} 이후). 본문은 {out}/*.json 의 text, 사진은 같은 이름 .jpg")
 
 
