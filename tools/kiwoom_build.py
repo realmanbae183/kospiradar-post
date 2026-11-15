@@ -5,6 +5,8 @@ Claude 는 사람 말투가 필요한 칸(slots.json)만 쓰고, 숫자 목록·
   python3 tools/kiwoom_build.py fetch  <WORK>                 kr-radar 재료와 그림을 WORK 로 받는다 (gh api)
   python3 tools/kiwoom_build.py facts  <WORK>                 WORK/facts.txt (Claude 가 읽을 짧은 요약) + WORK/facts.json
   python3 tools/kiwoom_build.py inbox  <WORK> <blog/_done.json>  수집함 원문 중 아직 안 쓴 것을 WORK/inbox 로 받고 목록 출력
+  python3 tools/kiwoom_build.py cards  <WORK>                 이슈 카드용: 지난 카드 작업(전 거래일 16:40) 뒤로 들어온 수집함 원문만 WORK/cards 로 받고
+                                                              '이슈카드'·'카드' 표시가 붙은 것을 맨 위에 ★ 로 보여준다 (예전 사진은 안 받음)
   python3 tools/kiwoom_build.py build  <WORK> <slots.json> <kp 폴더> [kr|kiwoom|notes|all]
         → kp/posts·media (국장 시황), kp/kiwoom/D (종목 세트·레이더·구루·원문 글), WORK/blog2.json (블로그 2편 재료)
         숫자 검사: 칸에 쓴 숫자가 재료에 없으면 '확인 필요'로 출력하고 종료 코드 2 (고치고 다시 build)
@@ -312,6 +314,44 @@ def cmd_facts(work: str) -> None:
 
 
 # ───────── inbox ─────────
+def cmd_cards(work: str) -> None:
+    now = datetime.now(KST)
+    d = now.date() - timedelta(days=1)
+    while d.weekday() >= 5:
+        d -= timedelta(days=1)
+    cut = datetime.combine(d, datetime.min.time(), KST).replace(hour=16, minute=40)
+    out = os.path.join(work, "cards")
+    os.makedirs(out, exist_ok=True)
+    days = json.loads(gh(f"repos/{REPO}/contents/inbox?ref=inbox"))
+    days = sorted(x["name"] for x in days if x["type"] == "dir" and x["name"] >= d.isoformat())
+    rows = []
+    for dd in days:
+        for x in json.loads(gh(f"repos/{REPO}/contents/inbox/{dd}?ref=inbox")):
+            if not x["name"].endswith(".json"):
+                continue
+            j = json.loads(gh(f"repos/{REPO}/contents/inbox/{dd}/{x['name']}?ref=inbox", raw=True))
+            if datetime.fromisoformat(j["received"]) < cut:
+                continue
+            stem = x["name"][:-5]
+            local = os.path.join(out, f"{dd}_{stem}")
+            json.dump(j, open(local + ".json", "w", encoding="utf-8"), ensure_ascii=False)
+            img = None
+            if j.get("photo"):
+                try:
+                    gh(f"repos/{REPO}/contents/inbox/{dd}/{stem}.jpg?ref=inbox", local + ".jpg", raw=True)
+                    img = local + ".jpg"
+                except RuntimeError:
+                    pass
+            t = (j.get("text") or "").replace("\n", " ")
+            star = bool(re.search(r"이슈\s*카드|카드\s*뉴스|카드로|카드 만들", t))
+            photo_tag = t.strip().startswith("사진")
+            rows.append((not star, j["received"], f"{dd}_{stem}", star, photo_tag, img, t[:90]))
+    rows.sort()
+    for _, rec, name, star, ph, img, t in rows:
+        print(("★ " if star else "  ") + ("[사진] " if ph else "") + f"{name} {rec[11:16]} " + ("그림있음 " if img else "") + t)
+    print(f"원문 {len(rows)}개 ({cut:%m/%d %H:%M} 이후). 본문은 {out}/*.json 의 text, 사진은 같은 이름 .jpg")
+
+
 def cmd_inbox(work: str, done_path: str) -> None:
     done = set(json.load(open(done_path, encoding="utf-8"))) if os.path.exists(done_path) else set()
     today = datetime.now(KST).date()
@@ -589,6 +629,8 @@ if __name__ == "__main__":
         print(status(a[1]))
     elif c == "facts":
         cmd_facts(a[1])
+    elif c == "cards":
+        cmd_cards(a[1])
     elif c == "inbox":
         cmd_inbox(a[1], a[2])
     elif c == "build":
