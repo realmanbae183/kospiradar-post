@@ -1,0 +1,15 @@
+{
+ "cover": {"title": ["AI 칩 전쟁", "팀 대결"], "sub": "엔비디아·트럼프 vs 앤트로픽·민주당", "photo": "trump_huang_point.png"},
+ "mood": "calm",
+ "slides": [
+  {"visual": {"type": "photo", "src": "trump_huang_point.png"}, "top": "엔비디아 팀", "main": ["젠슨 황 + 트럼프", "중국에 칩 팔자"], "note": "트럼프 행정부, 엔비디아 일부 칩 중국 판매 허용"},
+  {"visual": {"type": "photo", "src": "trump_xi.png"}, "top": "엔비디아 팀 감독은", "main": ["시진핑과도", "화기애애"], "note": "9월 시진핑 주석 워싱턴 국빈 방문"},
+  {"visual": {"type": "photo", "src": "anthropic_ceo.png"}, "top": "앤트로픽 팀", "main": ["중국에 칩 막자", "규제 강화파"], "note": "앤트로픽 CEO, 대중국 AI칩 수출 통제 강화를 꾸준히 주장"},
+  {"visual": {"type": "photo", "src": "schumer_democrat.png"}, "top": "앤트로픽 팀 응원단은 민주당", "main": ["업계 다 반대할 때", "앤트로픽만 빠졌다"], "note": "9월 민주당 칩 수출통제 법안, 업계 반대 로비에서 앤트로픽만 빠짐 (악시오스)"},
+  {"visual": {"type": "list", "title": "팀 구성", "rows": [["엔비디아 팀", "젠슨 황 · 트럼프 · 풀자", "blue"], ["앤트로픽 팀", "앤트로픽 CEO · 민주당 · 막자", "red"]]}, "top": "정리하면", "main": ["풀자 팀 vs", "막자 팀"]},
+  {"visual": {"type": "big", "big": "11/3", "color": "red", "head": "미국 중간선거", "label": "민주당 상·하원 장악 = 막자 팀 승리?"}, "top": "그런데 심판이 바뀌었다", "main": ["의회는 이제", "민주당 손에"], "note": "AP 등 보도"},
+  {"visual": {"type": "photo", "src": "huang_bw.png"}, "top": "그리고 9일 뒤", "main": ["엔비디아 팀 주장", "퇴장"], "note": "11/12 젠슨 황 사임 발표"},
+  {"visual": {"type": "photo", "src": "anthropic_ipo.png"}, "top": "같은 주에", "main": ["앤트로픽 팀은", "19일 상장"], "note": "18일 공모가 확정, 19일 나스닥 상장 예정"}
+ ],
+ "outro": {"title": ["이게 우연?", "2편 간다"], "sub": "다음 편: 버거대왕 공작설", "char": "bd12_돋보기"}
+}
