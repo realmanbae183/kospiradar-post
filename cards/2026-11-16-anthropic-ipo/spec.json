@@ -1,0 +1,71 @@
+{
+ "cover": {
+  "title": [
+   "IPO",
+   "중국 불가!"
+  ],
+  "sub": "앤트로픽, 중국 돈은 안 받는다",
+  "photo": "photos/anthropic_ipo.png"
+ },
+ "mood": "calm",
+ "slides": [
+  {
+   "visual": {
+    "type": "photo",
+    "src": "photos/china_flag.png"
+   },
+   "top": "앤트로픽 IPO 청약에서",
+   "main": [
+    "중국 본토·홍콩",
+    "주문 거절"
+   ],
+   "note": "블룸버그(11/13, 소식통 인용)"
+  },
+  {
+   "visual": {
+    "type": "big",
+    "big": "6배",
+    "label": "공모 물량 대비 청약 수요",
+    "color": "red"
+   },
+   "top": "돈이 모자라서가 아니다",
+   "main": [
+    "수요는 6배",
+    "그래도 중국은 NO"
+   ],
+   "note": "블룸버그(11/13) 보도 기준"
+  },
+  {
+   "visual": {
+    "type": "photo",
+    "src": "photos/anthropic_ceo.png"
+   },
+   "top": "원래 앤트로픽은",
+   "main": [
+    "중국 막자는",
+    "쪽이었다"
+   ],
+   "note": "앤트로픽은 대중 AI 반도체 수출통제 강화를 지지해 옴 · 사진 앤트로픽 CEO"
+  },
+  {
+   "visual": {
+    "type": "photo",
+    "src": "photos/xi.png"
+   },
+   "top": "그래서 드는 간단한 의혹",
+   "main": [
+    "규제 때문만일까?",
+    "워싱턴 줄서기일까?"
+   ],
+   "note": "버거대왕 의혹(추측) · 확인된 사실 아님"
+  }
+ ],
+ "outro": {
+  "title": [
+   "상장하면",
+   "바로 뜯어봄"
+  ],
+  "sub": "앤트로픽 IPO 소식 · 팔로우 안 하면 놓침",
+  "char": "bd12_돋보기"
+ }
+}
