@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: pip install edge-tts==7.0.2
+      - run: pip install -U edge-tts
       - run: |
           edge-tts --voice "${{ inputs.voice }}" --rate="${{ inputs.rate }}" \
             -f "tts/${{ inputs.name }}.txt" \
