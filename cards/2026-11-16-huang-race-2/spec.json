@@ -1,0 +1,93 @@
+{
+ "cover": {
+  "title": [
+   "젠슨황 vs",
+   "앤트로픽"
+  ],
+  "sub": "2편 · 버거대왕 시나리오 (추측)",
+  "photo": "photos/trump_huang_podium.png"
+ },
+ "mood": "calm",
+ "slides": [
+  {
+   "visual": {
+    "type": "photo",
+    "src": "photos/trump_shout.png"
+   },
+   "top": "1편 요약: 트럼프 주식 의혹",
+   "main": [
+    "엔비디아 67억 매수",
+    "민주당 조사 착수"
+   ],
+   "note": "가디언 보도: 25년 5월 수출규제 폐기 며칠 전 엔비디아 주식 매입"
+  },
+  {
+   "visual": {
+    "type": "photo",
+    "src": "photos/anthropic_ipo.png"
+   },
+   "top": "같은 주, 앤트로픽 IPO에선",
+   "main": [
+    "중국 돈은",
+    "안 받는다"
+   ],
+   "note": "블룸버그(11/13, 소식통): 중국 본토·홍콩 투자자 청약 주문 거절 · 수요는 물량 6배"
+  },
+  {
+   "visual": {
+    "type": "photo",
+    "src": "photos/anthropic_ceo.png"
+   },
+   "top": "시나리오① 엔비디아 반대편엔",
+   "main": [
+    "중국 막자는",
+    "앤트로픽"
+   ],
+   "note": "버거대왕 시나리오(추측) · 앤트로픽은 대중 반도체 수출통제 강화를 지지해 옴 · 사진 앤트로픽 CEO"
+  },
+  {
+   "visual": {
+    "type": "photo",
+    "src": "photos/trump_xi.png"
+   },
+   "top": "시나리오② 정치판도 갈린다?",
+   "main": [
+    "시진핑과 투샷 찰떡",
+    "트럼프"
+   ],
+   "note": "버거대왕 시나리오(추측) · 트럼프는 H200 중국 판매를 허용"
+  },
+  {
+   "visual": {
+    "type": "photo",
+    "src": "photos/schumer_democrat.png"
+   },
+   "top": "반대로 중국이라면",
+   "main": [
+    "치를 떠는",
+    "민주당"
+   ],
+   "note": "버거대왕 시나리오(추측) · 사진 민주당 지도부"
+  },
+  {
+   "visual": {
+    "type": "photo",
+    "src": "photos/trump_huang_point.png"
+   },
+   "top": "시나리오③ 그래서 판이 이렇게?",
+   "main": [
+    "트럼프는 엔비디아 편?",
+    "민주당은 앤트로픽 편?"
+   ],
+   "note": "버거대왕 시나리오(추측) · 조사 착수·중국 배제까지, 예상대로 흘러가는 중?"
+  }
+ ],
+ "outro": {
+  "title": [
+   "채점은",
+   "17일 실적"
+  ],
+  "sub": "시나리오 맞았는지 바로 채점 · 팔로우 안 하면 채점편 못 봄",
+  "photo": "photos/bk_magnifier.png"
+ }
+}
