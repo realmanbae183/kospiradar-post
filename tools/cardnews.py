@@ -204,7 +204,7 @@ def photo_box(src, box_w, box_h, hint=""):
         im = Image.open(p).convert("RGB")
         r = max(box_w / im.width, box_h / im.height)
         im = im.resize((round(im.width * r), round(im.height * r)), Image.LANCZOS)
-        l, t = (im.width - box_w) // 2, (im.height - box_h) // 3
+        l, t = (im.width - box_w) // 2, (im.height - box_h) // 6
         return im.crop((l, t, l + box_w, t + box_h))
     im = Image.new("RGB", (box_w, box_h), "#EDEDED")
     d = ImageDraw.Draw(im)
