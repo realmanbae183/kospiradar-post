@@ -371,6 +371,8 @@ def cmd_inbox(work: str, done_path: str) -> None:
             j = json.loads(gh(f"repos/{REPO}/contents/inbox/{dd}/{x['name']}?ref=inbox", raw=True))
             if datetime.fromisoformat(j["received"]) >= cut:
                 continue
+            if re.match(r"\s*(사진|(삼전|삼성|하닉|하이닉스|코스피)\s*표지)", j.get("text") or ""):
+                continue   # 인스타 카드용 사진·표지 짤은 키움·블로그 글 재료가 아님
             stem = x["name"][:-5]
             local = os.path.join(work, "inbox", f"{dd}_{stem}")
             json.dump(j, open(local + ".json", "w", encoding="utf-8"), ensure_ascii=False)
