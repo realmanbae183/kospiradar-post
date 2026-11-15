@@ -346,9 +346,18 @@ def cmd_cards(work: str) -> None:
             star = bool(re.search(r"이슈\s*카드|카드\s*뉴스|카드로|카드 만들", t))
             photo_tag = t.strip().startswith("사진")
             m = re.match(r"\s*(삼전|삼성|하닉|하이닉스|코스피)\s*표지", t)
-            if m and img:
+            if m:
                 photo_tag = "표지:" + {"삼전": "samsung", "삼성": "samsung", "하닉": "hynix", "하이닉스": "hynix", "코스피": "kospi"}[m.group(1)]
             rows.append((not star, j["received"], f"{dd}_{stem}", star, photo_tag, img, t[:90]))
+    # 앨범으로 보내면 첫 사진에만 글이 붙는다: 표지·사진 표시가 붙은 글 뒤 3분 안에 글 없이 온 사진은 같은 표시를 물려받는다
+    rows.sort(key=lambda r: r[1])
+    last = None
+    for i, r in enumerate(rows):
+        if r[4] and r[6].strip():
+            last = (datetime.fromisoformat(r[1]), r[4])
+        elif not r[6].strip() and r[5] and last and datetime.fromisoformat(r[1]) - last[0] <= timedelta(minutes=3):
+            rows[i] = r[:4] + (last[1],) + r[5:]
+            last = (datetime.fromisoformat(r[1]), last[1])
     rows.sort()
     for _, rec, name, star, ph, img, t in rows:
         tag = f"[{ph}] " if isinstance(ph, str) else ("[사진] " if ph else "")
