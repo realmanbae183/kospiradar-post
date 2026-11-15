@@ -20,6 +20,7 @@ spec.json 모양:
   "outro":  {"title": ["버거대왕", "팔로우"], "char": "bd25_팔로우부탁", "sub": "매일 장 마감 뒤 올라옵니다"},
   "mood": "down"
 }
+(선택) 표지 "colors": ["red","blue"], 가운데 장 "colors": ["red","blue"] 로 줄마다 글자색을 바꿀 수 있다.
 """
 from __future__ import annotations
 import glob, hashlib, json, os, subprocess, sys
@@ -238,9 +239,10 @@ def cover(spec, n) -> Image.Image:
     title = cv["title"] if isinstance(cv["title"], list) else [cv["title"]]
     f, s = fit(dr, title, "Black", 300 if len(title) == 1 else 220, W - 110, 110)
     y = 70
-    for l in title:
+    cols = cv.get("colors") or []                       # 줄마다 색 (예: ["red", "blue"]), 없으면 빨강
+    for k, l in enumerate(title):
         bb = dr.textbbox((0, 0), l, font=f)
-        center(dr, y - bb[1], l, f, RED)
+        center(dr, y - bb[1], l, f, {"red": RED, "blue": BLUE, "ink": INK}.get(cols[k] if k < len(cols) else "red", RED))
         y += (bb[3] - bb[1]) + int(s * 0.16)
     if cv.get("sub"):
         fs, ss = fit(dr, [cv["sub"]], "Black", 64, W - 140, 36)
@@ -277,9 +279,11 @@ def body(sl, i, n) -> Image.Image:
     bb = dr.textbbox((0, 0), sl["top"], font=ft)
     center(dr, y - bb[1], sl["top"], ft, INK)
     y += st + 34
-    for l in main:
+    cols = sl.get("colors") or []                       # 굵은 줄마다 색 (예: ["red", "blue"])
+    for k, l in enumerate(main):
         bb = dr.textbbox((0, 0), l, font=fm)
-        center(dr, y - bb[1], l, fm, sl.get("color") and {"red": RED, "blue": BLUE}[sl["color"]] or BLUE)
+        col = cols[k] if k < len(cols) else sl.get("color", "blue")
+        center(dr, y - bb[1], l, fm, {"red": RED, "blue": BLUE, "ink": INK}.get(col, BLUE))
         y += gap
     if sl.get("note"):
         fn, _ = fit(dr, [sl["note"]], "Regular", 24, W - 100, 16)
