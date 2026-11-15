@@ -1,0 +1,16 @@
+{
+ "cover": {"title": ["앤트로픽", "중국 손절"], "sub": "IPO에서 중국 돈은 안 받는다", "photo": "anthropic_ipo.png"},
+ "mood": "calm",
+ "slides": [
+  {"visual": {"type": "photo", "src": "china_flag.png"}, "top": "블룸버그 단독 (11/13)", "main": ["중국·홍콩 기관", "청약 주문 퇴짜"], "note": "주관사들이 주문을 안 받는 중, 미국 무기수출규정(ITAR) 영향 · 블룸버그"},
+  {"visual": {"type": "big", "big": "6배", "color": "red", "head": "앤트로픽 IPO 청약 수요", "label": "18일 공모가 확정 · 19일 나스닥 상장(ANT)"}, "top": "중국 돈 없어도", "main": ["청약은", "6배 몰렸다"], "note": "블룸버그 등 보도 기준"},
+  {"visual": {"type": "photo", "src": "anthropic_ceo.png"}, "top": "원래 중국에 제일 깐깐한 회사", "main": ["앤트로픽은", "칩 수출 규제파"], "note": "앤트로픽 CEO, 대중국 AI칩 수출 통제 강화를 꾸준히 주장"},
+  {"visual": {"type": "photo", "src": "trump_huang_point.png"}, "top": "반대편엔 젠슨 황", "main": ["중국에 칩 팔자", "규제 완화파"], "note": "트럼프 행정부, 일부 엔비디아 칩 중국 판매 허용"},
+  {"visual": {"type": "list", "title": "같은 판, 두 편", "rows": [["규제 완화", "엔비디아 · 트럼프", "blue"], ["규제 강화", "앤트로픽 · 민주당", "red"]]}, "top": "그래서 편이 갈렸다", "main": ["풀자 vs 막자", "AI칩 전쟁"], "note": "민주당은 수출통제 법안 추진, 업계 중 앤트로픽만 반대 로비 불참 (악시오스)"},
+  {"visual": {"type": "photo", "src": "schumer_democrat.png"}, "top": "그런데 11월 3일 중간선거", "main": ["민주당이", "상·하원 싹쓸이"], "note": "AP 등 보도, 민주당 의회 장악은 2023년 이후 처음"},
+  {"visual": {"type": "big", "big": "9일 뒤", "color": "blue", "head": "11/3 선거 → 11/12 사임 발표", "label": "불륜·중국 스파이 의혹, 민주당 의원들 해명 요구"}, "top": "그리고 정확히", "main": ["젠슨 황", "퇴진"], "note": "워런·리드 상원의원, 사임 뒤에도 해명 요구"},
+  {"visual": {"type": "photo", "src": "trump_shout.png"}, "top": "트럼프는 끝까지 감쌌다", "main": ["황은 대단한 인재", "후임은 팀 쿡?"], "note": "트럼프 트루스소셜·인터뷰 (11/12), 사임 전날 버티라고 했다는 NYT 보도"},
+  {"visual": {"type": "photo", "src": "trump_xi.png"}, "top": "버거대왕 시나리오 (추측)", "main": ["트럼프·엔비디아 vs", "민주당·앤트로픽?"], "note": "확인된 사실이 아닌 버거대왕 개인 상상입니다"}
+ ],
+ "outro": {"title": ["19일 상장날", "채점 간다"], "sub": "앤트로픽 상장날 시나리오 맞았는지 확인합니다", "char": "bd12_돋보기"}
+}
