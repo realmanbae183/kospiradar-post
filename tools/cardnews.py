@@ -197,7 +197,37 @@ def v_list(c, dr, v):
         dr.text((VX0 + 56 + kw, yy + rh / 2 - 30), r[1], font=fvv, fill=INK)
 
 
-VISUALS = {"char": v_char, "big": v_big, "line": v_line, "bars": v_bars, "list": v_list}
+def photo_box(src, box_w, box_h, hint=""):
+    """사진을 상자 크기에 꽉 차게(가운데 기준으로 잘라서) 맞춘다. 사진이 아직 없으면 회색 자리표시."""
+    p = src if os.path.isabs(src) else os.path.join(PHOTO_DIR[0], src)
+    if os.path.exists(p):
+        im = Image.open(p).convert("RGB")
+        r = max(box_w / im.width, box_h / im.height)
+        im = im.resize((round(im.width * r), round(im.height * r)), Image.LANCZOS)
+        l, t = (im.width - box_w) // 2, (im.height - box_h) // 3
+        return im.crop((l, t, l + box_w, t + box_h))
+    im = Image.new("RGB", (box_w, box_h), "#EDEDED")
+    d = ImageDraw.Draw(im)
+    f, _ = fit(d, ["사진 자리: " + (hint or src)], "Bold", 40, box_w - 80, 22)
+    t = "사진 자리: " + (hint or src)
+    d.text(((box_w - d.textlength(t, font=f)) / 2, box_h / 2 - 24), t, font=f, fill="#999999")
+    return im
+
+
+PHOTO_DIR = [""]
+
+
+def v_photo(c, dr, v):
+    im = photo_box(v["src"], VX1 - VX0, VY1 - VY0, v.get("hint", ""))
+    mask = Image.new("L", im.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, im.width - 1, im.height - 1), radius=36, fill=255)
+    c.paste(im, (VX0, VY0), mask)
+    if v.get("credit"):
+        fc = font("Regular", 22)
+        dr.text((VX1 - 20 - dr.textlength(v["credit"], font=fc), VY1 + 6), v["credit"], font=fc, fill=GREY)
+
+
+VISUALS = {"photo": v_photo, "char": v_char, "big": v_big, "line": v_line, "bars": v_bars, "list": v_list}
 
 
 # ───────── 장 종류 ─────────
@@ -217,6 +247,15 @@ def cover(spec, n) -> Image.Image:
         center(dr, y + 6, cv["sub"], fs, INK)
         y += ss + 40
     room = H - y - 10
+    if cv.get("photo"):
+        ph = photo_box(cv["photo"], W - 120, room - 50, cv.get("hint", ""))
+        mask = Image.new("L", ph.size, 0)
+        ImageDraw.Draw(mask).rounded_rectangle((0, 0, ph.width - 1, ph.height - 1), radius=36, fill=255)
+        c.paste(ph, (60, H - ph.height - 60), mask)
+        if cv.get("char"):
+            im = character(cv["char"], 360, cut_bg=True)
+            c.paste(im, (W - im.width - 30, H - im.height - 20), im)
+        return c
     im = character(cv.get("char", "bd23_속보"), min(room, 980), cut_bg=True)
     c.paste(im, ((W - im.width) // 2, H - im.height), im)
     return c
@@ -295,6 +334,7 @@ def check(spec) -> list[str]:
 
 def build(spec_path: str, reel: bool = False) -> list[str]:
     spec = json.load(open(spec_path, encoding="utf-8"))
+    PHOTO_DIR[0] = os.path.dirname(os.path.abspath(spec_path))
     bad = check(spec)
     if bad:
         raise SystemExit("고칠 것:\n- " + "\n- ".join(bad))
