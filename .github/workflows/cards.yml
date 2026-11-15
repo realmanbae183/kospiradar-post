@@ -1,0 +1,55 @@
+# 카드뉴스 완성본을 지훈 님 개인 텔레그램(TG_ME)으로 보낸다.
+#   cards/날짜-이름/ 안에 01.jpg~10.jpg 를 만들고, 마지막에 send.txt(첫 줄 아무 글) 를 올리면 그 폴더를 보낸다.
+#   caption.txt 가 있으면 인스타 캡션으로 사진 뒤에 따로 보낸다.
+name: cards
+on:
+  push:
+    branches: [main]
+    paths: ["cards/**/send.txt"]
+  workflow_dispatch:
+    inputs:
+      dir: {description: "다시 보낼 폴더 (예: cards/2026-11-16-huang-race)", required: true}
+permissions: {contents: read}
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: 보낼 폴더 찾기
+        id: f
+        env: {BEFORE: "${{ github.event.before }}"}
+        run: |
+          if [ -n "${{ inputs.dir }}" ]; then D="${{ inputs.dir }}"; else
+            if git cat-file -e "$BEFORE" 2>/dev/null; then R="$BEFORE..HEAD"; else R="HEAD~1..HEAD"; fi
+            D=$(git diff --name-only $R -- 'cards/**/send.txt' | xargs -r -n1 dirname | sort -u | tr '\n' ' ')
+          fi
+          echo "dirs=$D" >> "$GITHUB_OUTPUT"
+      - name: 텔레그램으로 보내기
+        if: steps.f.outputs.dirs != ''
+        env:
+          TOK: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ME: ${{ secrets.TG_ME }}
+          DIRS: ${{ steps.f.outputs.dirs }}
+        run: |
+          pip install -q requests
+          python3 - <<'PY'
+          import os, glob, json, requests, time
+          tok, me = os.environ["TOK"], os.environ["ME"]
+          api = f"https://api.telegram.org/bot{tok}/"
+          for d in os.environ["DIRS"].split():
+              pics = sorted(glob.glob(f"{d}/[0-9][0-9].jpg"))[:10]
+              media, files = [], {}
+              for i, p in enumerate(pics):
+                  files[f"p{i}"] = open(p, "rb")
+                  media.append({"type": "photo", "media": f"attach://p{i}"})
+              r = requests.post(api + "sendMediaGroup", data={"chat_id": me, "media": json.dumps(media)}, files=files, timeout=120)
+              print(d, "사진", len(pics), r.status_code, r.text[:200] if r.status_code != 200 else "")
+              time.sleep(1.5)
+              cap = f"{d}/caption.txt"
+              if os.path.exists(cap):
+                  t = open(cap, encoding="utf-8").read()
+                  r = requests.post(api + "sendMessage", data={"chat_id": me, "text": t[:3900]}, timeout=60)
+                  print("캡션", r.status_code)
+          PY
