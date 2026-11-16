@@ -1,0 +1,58 @@
+# 이안식 명언 릴스 예약 업로드 (매일 저녁 8시, 하루 1개)
+#   reels/queue/ 에 영상(이름.mp4)과 캡션(이름.txt)을 같은 이름으로 넣어 두면
+#   매일 저녁 8시(한국 시간)에 이름순으로 가장 앞의 것 1개를 @stock_burger_king 릴스로 올리고 reels/done/ 으로 옮긴다.
+#   이름은 001-피터틸.mp4 처럼 번호를 앞에 붙여서 순서를 정한다. 대기열이 비어 있으면 아무것도 안 한다.
+#   GitHub 예약 실행은 몇 분~수십 분 늦게 시작될 수 있다.
+name: reels
+
+on:
+  schedule:
+    - cron: "0 11 * * *"          # 매일 11:00 UTC = 한국 시간 저녁 8시
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "실행 방식"
+        type: choice
+        options: [시험(게시 안 함), 지금 올리기]
+        default: 시험(게시 안 함)
+
+permissions:
+  contents: write
+
+concurrency:
+  group: send                     # 시황 발송과 겹치지 않게 같은 줄에 세운다
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: 대기열에서 다음 영상 찾기
+        id: f
+        run: |
+          N=$(ls reels/queue/*.mp4 2>/dev/null | sort | head -1)
+          if [ -z "$N" ]; then echo "대기열 비어 있음 → 오늘은 안 올림"; exit 0; fi
+          T="${N%.mp4}.txt"
+          [ -f "$T" ] || { echo "::error::$T 캡션 파일이 없어요"; exit 1; }
+          echo "mp4=$N" >> "$GITHUB_OUTPUT"; echo "txt=$T" >> "$GITHUB_OUTPUT"
+          echo "다음 영상: $N  (남은 개수: $(ls reels/queue/*.mp4 | wc -l))"
+      - name: 인스타 릴스 올리기
+        if: steps.f.outputs.mp4 != ''
+        env:
+          IG_TOKEN: ${{ secrets.IG_TOKEN }}
+          MODE: ${{ inputs.mode }}
+        run: |
+          [ -z "$IG_TOKEN" ] && { echo "::error::Secrets에 IG_TOKEN 이 없어요"; exit 1; }
+          pip install -q requests
+          if [ "$MODE" = "시험(게시 안 함)" ]; then
+            python insta.py test "${{ steps.f.outputs.mp4 }}" none.json "${{ steps.f.outputs.txt }}"
+            exit 0
+          fi
+          python insta.py post "${{ steps.f.outputs.mp4 }}" none.json "${{ steps.f.outputs.txt }}"
+          mkdir -p reels/done
+          git config user.name "kospiradar-bot"; git config user.email "actions@users.noreply.github.com"
+          git mv "${{ steps.f.outputs.mp4 }}" "${{ steps.f.outputs.txt }}" reels/done/
+          git commit -m "reels: 올림 $(basename "${{ steps.f.outputs.mp4 }}")"
+          for i in 1 2 3; do git pull --rebase -q && git push && break; sleep 5; done
