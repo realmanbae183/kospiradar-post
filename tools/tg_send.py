@@ -23,8 +23,17 @@ ZW = "​"
 def call(method: str, chat: str, files=None, **data) -> None:
     tok = os.environ["TOK"]
     data["chat_id"] = chat
-    for i in range(3):
-        r = requests.post(API.format(tok, method), data=data, files=files, timeout=60)
+    for i in range(5):
+        for f in (files or {}).values():          # 다시 보낼 때 사진 파일을 처음부터
+            fo = f[1] if isinstance(f, tuple) else f
+            if hasattr(fo, "seek"):
+                fo.seek(0)
+        try:
+            r = requests.post(API.format(tok, method), data=data, files=files, timeout=60)
+        except requests.exceptions.ConnectionError as e:   # 텔레그램이 연결을 끊으면 잠깐 쉬고 다시
+            print(method, "연결 끊김, 다시 시도", i + 1, e.__class__.__name__)
+            time.sleep(5 * (i + 1))
+            continue
         if r.status_code == 429:
             time.sleep(int(r.json().get("parameters", {}).get("retry_after", 3)) + 1)
             continue
