@@ -52,7 +52,10 @@ jobs:
             -maxrate 12M -bufsize 24M -g 30 -r 30 -c:a aac -b:a 128k -ar 44100 -ac 2 -map_metadata -1 -movflags +faststart /tmp/reel.mp4
           ls -la /tmp/reel.mp4
           if [ "$MODE" = "시험(게시 안 함)" ]; then
-            python insta.py test /tmp/reel.mp4 none.json "${{ steps.f.outputs.txt }}"
+            "$FF" -y -loglevel error -i /tmp/reel.mp4 -t 8 -c copy -movflags +faststart /tmp/r8.mp4
+            "$FF" -y -loglevel error -i /tmp/reel.mp4 -t 30 -c copy -movflags +faststart /tmp/r30.mp4
+            "$FF" -y -loglevel error -i /tmp/reel.mp4 -an -c copy -movflags +faststart /tmp/rna.mp4
+            for V in r8 r30 rna; do echo "== $V"; python insta.py test /tmp/$V.mp4 none.json "${{ steps.f.outputs.txt }}" || true; done
             exit 0
           fi
           python insta.py post /tmp/reel.mp4 none.json "${{ steps.f.outputs.txt }}"
