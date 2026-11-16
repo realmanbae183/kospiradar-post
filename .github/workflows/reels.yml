@@ -45,20 +45,13 @@ jobs:
           MODE: ${{ inputs.mode }}
         run: |
           [ -z "$IG_TOKEN" ] && { echo "::error::Secrets에 IG_TOKEN 이 없어요"; exit 1; }
-          pip install -q requests imageio-ffmpeg
-          FF=$(command -v ffmpeg || python -c "import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())")
-          # 시황 릴스와 똑같은 규격으로 다시 굽는다 (인스타가 받아 주는 형식: H.264 high · 30fps · AAC 44.1kHz · faststart)
-          "$FF" -y -loglevel error -i "${{ steps.f.outputs.mp4 }}" -map 0:v:0 -map 0:a:0 -c:v libx264 -profile:v high -pix_fmt yuv420p -crf 18 -preset medium \
-            -maxrate 12M -bufsize 24M -g 30 -r 30 -c:a aac -b:a 128k -ar 44100 -ac 2 -map_metadata -1 -movflags +faststart /tmp/reel.mp4
-          ls -la /tmp/reel.mp4
+          pip install -q requests
+          # 영상은 저장소 공개 주소로 넘겨서 인스타가 직접 가져가게 한다 (30초 넘는 영상은 직접 업로드가 거절됨)
           if [ "$MODE" = "시험(게시 안 함)" ]; then
-            "$FF" -y -loglevel error -i /tmp/reel.mp4 -t 8 -c copy -movflags +faststart /tmp/r8.mp4
-            "$FF" -y -loglevel error -i /tmp/reel.mp4 -t 30 -c copy -movflags +faststart /tmp/r30.mp4
-            "$FF" -y -loglevel error -i /tmp/reel.mp4 -an -c copy -movflags +faststart /tmp/rna.mp4
-            for V in r8 r30 rna; do echo "== $V"; python insta.py test /tmp/$V.mp4 none.json "${{ steps.f.outputs.txt }}" || true; done
+            python tools/reel_url.py "${{ steps.f.outputs.mp4 }}" "${{ steps.f.outputs.txt }}" test
             exit 0
           fi
-          python insta.py post /tmp/reel.mp4 none.json "${{ steps.f.outputs.txt }}"
+          python tools/reel_url.py "${{ steps.f.outputs.mp4 }}" "${{ steps.f.outputs.txt }}"
           mkdir -p reels/done
           git config user.name "kospiradar-bot"; git config user.email "actions@users.noreply.github.com"
           git mv "${{ steps.f.outputs.mp4 }}" "${{ steps.f.outputs.txt }}" reels/done/
