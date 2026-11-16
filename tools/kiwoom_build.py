@@ -217,6 +217,7 @@ def build_facts(work: str) -> dict:
             ms, sm = review_marks(r)
             st["review"] = {"day": r["day"], "prev_up": r["prev"]["up"], "prev_down": r["prev"]["down"], "prev_flat": r["prev"]["flat"],
                             "today": r["today"], "side": sm.get("side"), "verdict": sm.get("verdict"), "breaks": sm.get("breaks", []),
+                            "near_close": sm.get("near_close", []),
                             "marks": [{"text": f"{m['at']} {m['txt']}", "line": m.get("line"), "nth": m.get("nth"), "kind": m.get("kind"),
                                        "move_pct": m.get("move_pct"), "move_dir": m.get("move_dir")} for m in ms],
                             "image": r.get("image")}
@@ -264,6 +265,8 @@ def facts_text(F: dict) -> str:
                 o.append(f"  동그라미: {m['text']} → 그 뒤 {m['move_pct']}% {m['move_dir']} ({m['nth']} {m['kind']})")
             for b in r["breaks"]:
                 o.append(f"  뚫림: {b}")
+            for b in r["near_close"]:
+                o.append(f"  선 근처 마감(빗나간 것 아님, 범위 끝까지 정확히 온 것): {b}")
         else:
             o.append("[점검] 재료 없음 → 점검 글 안 씀")
         I = s["ind"]
