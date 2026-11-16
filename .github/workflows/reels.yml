@@ -45,12 +45,15 @@ jobs:
           MODE: ${{ inputs.mode }}
         run: |
           [ -z "$IG_TOKEN" ] && { echo "::error::Secrets에 IG_TOKEN 이 없어요"; exit 1; }
-          pip install -q requests
+          pip install -q requests imageio-ffmpeg
+          FF=$(command -v ffmpeg || python -c "import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())")
+          # 인스타는 영상 정보(moov)가 파일 앞에 있어야 받아 준다 → 화질 그대로 앞쪽으로 옮겨서 올린다
+          "$FF" -y -loglevel error -i "${{ steps.f.outputs.mp4 }}" -c copy -movflags +faststart /tmp/reel.mp4
           if [ "$MODE" = "시험(게시 안 함)" ]; then
-            python insta.py test "${{ steps.f.outputs.mp4 }}" none.json "${{ steps.f.outputs.txt }}"
+            python insta.py test /tmp/reel.mp4 none.json "${{ steps.f.outputs.txt }}"
             exit 0
           fi
-          python insta.py post "${{ steps.f.outputs.mp4 }}" none.json "${{ steps.f.outputs.txt }}"
+          python insta.py post /tmp/reel.mp4 none.json "${{ steps.f.outputs.txt }}"
           mkdir -p reels/done
           git config user.name "kospiradar-bot"; git config user.email "actions@users.noreply.github.com"
           git mv "${{ steps.f.outputs.mp4 }}" "${{ steps.f.outputs.txt }}" reels/done/
