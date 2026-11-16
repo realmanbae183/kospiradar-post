@@ -471,7 +471,12 @@ def cmd_build(work: str, slots_path: str, kp: str, what: str = "all") -> None:
     F = json.load(open(os.path.join(work, "facts.json"), encoding="utf-8"))
     S = json.load(open(slots_path, encoding="utf-8"))
     kr = load(work, "kr.json")
-    D = load(work, "daily.json")["items"][0]["date"]
+    # 날짜는 국장 재료(kr.json) 기준. 데일리가 옛것이면 그 날짜로 파일을 만들어 지난 글을 덮어쓰던 문제를 막는다
+    D = ((kr or {}).get("today") or {}).get("day") or datetime.now(KST).date().isoformat()   # 국장 재료 날짜, 없으면 오늘(한국)
+    _dd = (load(work, "daily.json") or {}).get("items") or [{}]
+    if _dd[0].get("date") != D:
+        print(f"주의: daily.json 날짜 {_dd[0].get('date')} ≠ 오늘 {D} → 종목 세트는 만들지 않음")
+        F["stocks"] = []
     probs: list[str] = []
     made: list[str] = []
     kdir = os.path.join(kp, "kiwoom", D)
