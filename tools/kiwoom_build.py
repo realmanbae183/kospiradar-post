@@ -13,7 +13,7 @@ Claude 는 사람 말투가 필요한 칸(slots.json)만 쓰고, 숫자 목록·
   python3 tools/kiwoom_build.py blog   <blocks.json> <출력 폴더>   blog_render 로 블로그 한 편 (title·blocks·tags)
 
 키움 텔레그램 순서 (파일 이름 순서 = 보내는 순서):
-  11a-kospi-review(점검) → 11b-kospi(내일 예상) → 12a-samsung-review → 12b-samsung → … → 15b-semco
+  11a-kospi-review(점검) → 11b-kospi(내일 예상) → 11c-kospi-key(기억할 숫자) → 12a … → 15c-semco-key
   → 61~63-sig(과매도) → 70-guru → 801~-note(수집함 원문 글)
 각 .md 는 첫 줄 = 제목, 나머지 = 본문. 발송 작업(kiwoom.yml)이 사진 → 제목 → 본문 세 번에 나눠 보낸다.
 """
@@ -136,28 +136,32 @@ def status(work) -> str:
 
 
 # ───────── 근거 문구 다듬기 ─────────
+NUM_RE = re.compile(r"\s*\(?\d{1,3}(?:,\d{3})+(?:\.\d+)?\)?|\s*\(?\d+\.\d+\)?")
+
+
 def clean_why(w: str) -> tuple[int, str]:
-    """daily.json levels.why 한 줄 → (순서, 짧은 근거). 차트 근거가 먼저, 피봇 계산값은 뒤."""
-    m = re.match(r"피봇 (\d)차 (저항|지지)선 ([\d,.]+)", w)
+    """daily.json levels.why 한 줄 → (순서, 짧은 근거). 차트 근거가 먼저, 피봇은 뒤.
+    지훈 님 요청(11/20): 근거 뒤에 숫자를 붙이지 않는다 — '802,000 - 5일선, 피봇 1차 저항' 꼴."""
+    m = re.match(r"피봇 (\d)차 (저항|지지)선", w)
     if m:
-        return 9, f"피봇 {m.group(1)}차 {m.group(2)} {m.group(3)}"
-    m = re.match(r"근처 매물대\(([\d,.]+)~([\d,.]+)\)", w)
+        return 9, f"피봇 {m.group(1)}차 {m.group(2)}"
+    if w.startswith("근처 매물대"):
+        return 1, "매물대 한가운데"
+    m = re.match(r"근처 (.+?)\([\d,.]+\)에 맞춤", w)
     if m:
-        return 1, f"매물대 {m.group(1)}~{m.group(2)} 한가운데"
-    m = re.match(r"근처 (.+?)\(([\d,.]+)\)에 맞춤", w)
+        return 1, m.group(1)
+    m = re.match(r"1차와 너무 붙어 그 다음 선인 (.+?)\([\d,.]+\)로", w)
     if m:
-        return 1, f"{m.group(1)} {m.group(2)}"
-    m = re.match(r"1차와 너무 붙어 그 다음 선인 (.+?)\(([\d,.]+)\)로", w)
-    if m:
-        return 1, f"{m.group(1)} {m.group(2)}"
-    m = re.match(r"1차와 너무 붙어 1차에서 하루 평균 변동폭의 ([\d.]+)배 더", w)
-    if m:
-        return 5, f"받쳐줄 차트 자리 없음, 1차에서 하루 변동폭 {m.group(1)}배 더"
-    return 3, w
+        return 1, m.group(1)
+    if "하루 평균 변동폭" in w:
+        return 5, "받쳐줄 차트 자리 없음, 하루 변동폭으로 잡은 자리"
+    return 3, NUM_RE.sub("", w).strip()
 
 
 def reasons(lv: dict) -> str:
     rs = sorted(clean_why(w) for w in lv.get("why", []))
+    if any(o == 5 for o, _ in rs):                 # 변동폭으로 옮긴 선은 피봇 값과 가격이 달라서 피봇은 빼고 적는다
+        rs = [x for x in rs if x[0] != 9]
     return ", ".join(r for _, r in rs) or "근거 없음"
 
 
@@ -176,18 +180,20 @@ def scenario_lines(it: dict) -> list[str]:
     out.append(f"{f(up[1]['price'])} - {reasons(up[1])}")
     if L.get("up_more"):
         far = (L["up_more"]["price"] - c) > 2 * atr
-        out.append(f"{f(L['up_more']['price'])} - 종가로 {f(up[1]['price'])} 넘기면 {L['up_more']['why']}까지" + (", 다만 현실적으론 먼 거리" if far else ""))
+        why = NUM_RE.sub("", L["up_more"]["why"]).strip()
+        out.append(f"{f(L['up_more']['price'])} - " + (f"{why}, 다만 현실적으론 먼 거리" if far else f"2차 넘기면 {why}까지"))
     if L.get("volume_share_to_up1") is not None:
-        out.append(f"종가에서 1차 저항까지 매물 {L['volume_share_to_up1']}% - {thick(L['volume_share_to_up1'])}")
+        out.append(f"1차 저항까지 매물은 {thick(L['volume_share_to_up1'])}")
     out += ["", "횡보 시나리오", f"{f(fl[0])} ~ {f(fl[1])}{u}", ""]
     out += ["하락 시나리오", f"{f(dn[0]['price'])} ~ {f(dn[1]['price'])}{u}", ""]
     out.append(f"{f(dn[0]['price'])} - {reasons(dn[0])}")
     out.append(f"{f(dn[1]['price'])} - {reasons(dn[1])}")
     if L.get("down_more"):
         far = (c - L["down_more"]["price"]) > 2 * atr
-        out.append(f"{f(L['down_more']['price'])} - 종가로 {f(dn[1]['price'])} 깨지면 {L['down_more']['why']}까지" + (", 다만 현실적으론 먼 거리" if far else ""))
+        why = NUM_RE.sub("", L["down_more"]["why"]).strip()
+        out.append(f"{f(L['down_more']['price'])} - " + (f"{why}, 다만 현실적으론 먼 거리" if far else f"2차 깨지면 {why}까지"))
     if L.get("volume_share_to_dn1") is not None:
-        out.append(f"종가에서 1차 지지까지 매물 {L['volume_share_to_dn1']}% - {thick(L['volume_share_to_dn1'])}")
+        out.append(f"1차 지지까지 매물은 {thick(L['volume_share_to_dn1'])}")
     return out
 
 
@@ -511,10 +517,9 @@ def cmd_build(work: str, slots_path: str, kp: str, what: str = "all") -> None:
             rv = s.get("review")
             if rv and sl.get("review_open"):
                 lines = [m["text"] for m in rv["marks"]] or rv["breaks"]
-                for kx in ("review_open", "review_imagine"):
-                    if sl.get(kx):
-                        check_nums(sl[kx], allowed, f"{s['name']} 점검 {kx}", probs)
-                txt = body(sl["review_open"], "\n".join(lines), sl.get("review_imagine", ""), END_REVIEW)
+                check_nums(sl["review_open"], allowed, f"{s['name']} 점검 review_open", probs)
+                # 11/20 지훈 님: '~했다면 몇 % 먹었을 것' 상상 매매 줄은 빼기로 함
+                txt = body(sl["review_open"], "\n".join(lines), END_REVIEW)
                 name = f"1{n}a-{s['key']}-review"
                 write_md(os.path.join(kdir, name + ".md"), f"{rv['day']} {s['name']} 어제 예상 점검", txt)
                 if rv.get("image") and os.path.exists(os.path.join(work, rv["image"])):
@@ -523,43 +528,58 @@ def cmd_build(work: str, slots_path: str, kp: str, what: str = "all") -> None:
                 blog2.append(("review", s, txt, os.path.join(kdir, name + ".png")))
             elif rv:
                 probs.append(f"{s['name']} 점검 글 칸(review_open)이 비어 있음")
-            if sl.get("fc_first"):
-                for kx in ("fc_first", "fc_indicator", "fc_greet"):
-                    if sl.get(kx):
-                        check_nums(sl[kx], allowed, f"{s['name']} 예상 {kx}", probs)
-                txt = body(sl["fc_first"], "\n".join(s["scenario"]), LINE, sl.get("fc_indicator", ""), LINE,
-                           sl.get("fc_greet", ""), "\n".join(END_FORMAL))
+            # 내일 예상(b): 11/20 지훈 님 — 첫 문장(등락률)과 보조지표 덩어리는 빼고, 시나리오 + 인사 + 맺음만
+            if sl.get("fc_greet"):
+                check_nums(sl["fc_greet"], allowed, f"{s['name']} 예상 fc_greet", probs)
+                txt = body("\n".join(s["scenario"]), sl["fc_greet"], "\n".join(END_FORMAL))
                 name = f"1{n}b-{s['key']}"
                 write_md(os.path.join(kdir, name + ".md"), f"{s['next']} {s['name']} 내일 예상", txt)
-                if os.path.exists(os.path.join(work, s["file"] + ".png")):
-                    shutil.copy(os.path.join(work, s["file"] + ".png"), os.path.join(kdir, name + ".png"))
+                chart = os.path.join(work, s["file"] + ".png")
+                if os.path.exists(chart):
+                    shutil.copy(chart, os.path.join(kdir, name + ".png"))
                 made.append(name)
                 blog2.append(("forecast", s, txt, os.path.join(kdir, name + ".png")))
             else:
-                probs.append(f"{s['name']} 내일 예상 칸(fc_first)이 비어 있음")
+                probs.append(f"{s['name']} 내일 예상 칸(fc_greet)이 비어 있음")
+            # 기억할 숫자(c): 내일 예상과 따로 올리는 글. 제목에 제일 중요한 선 하나, 본문은 보조지표 해설
+            ky = sl.get("key") or {}
+            if ky.get("title") and ky.get("body"):
+                check_nums(ky["title"], allowed, f"{s['name']} 기억할 숫자 제목", probs)
+                check_nums(ky["body"], allowed, f"{s['name']} 기억할 숫자 본문", probs)
+                txt = body(ky["body"], "\n".join(END_FORMAL[-2:]))
+                name = f"1{n}c-{s['key']}-key"
+                write_md(os.path.join(kdir, name + ".md"), f"{s['name']}, {ky['title'].strip()}", txt)
+                chart = os.path.join(work, s["file"] + ".png")
+                if os.path.exists(chart):
+                    shutil.copy(chart, os.path.join(kdir, name + ".png"))
+                made.append(name)
+                blog2.append(("key", s, txt, os.path.join(kdir, name + ".png")))
+            else:
+                probs.append(f"{s['name']} 기억할 숫자 칸(key.title·key.body)이 비어 있음")
         # 과매도
         for s in F["sigs"]:
             if s.get("mismatch"):
                 probs.append(f"레이더 {s['name']} 시세 불일치로 안 올림 ({s['mismatch']}) → PushNotification 으로 알리기"); continue
             sl = (S.get("sigs") or {}).get(str(s["n"])) or {}
-            if not sl.get("first"):
-                probs.append(f"레이더 {s['name']} 칸(first)이 비어 있음"); continue
             allowed = allowed_from(s, F.get("new_os_total"))
-            for kx in ("first", "comment"):
-                if sl.get(kx):
-                    check_nums(sl[kx], allowed, f"레이더 {s['name']} {kx}", probs)
+            if sl.get("comment"):
+                check_nums(sl["comment"], allowed, f"레이더 {s['name']} comment", probs)
+            # 11/20 지훈 님: 첫 줄(등락률)·팔로우·댓글 문구 빼고 짧게. 과거 성적 → 근거 순서
             fl, ps = s["flags"] or {}, s["past_same_state"] or {}
-            sig = [f"겹친 신호 {s['overlap']}개"]
-            if fl.get("rsi"):
-                sig.append(f"RSI 30 아래 - {s['rsi']}")
+            why = []
             if fl.get("bb"):
-                sig.append("볼린저 하단 이탈 - 하단 밖에서 마감")
+                why.append("볼린저 하단 이탈")
             if fl.get("gap"):
-                sig.append(f"20일선과의 거리 - {s['gap_from_ma20_pct']}%")
-            past = [f"과거 같은 상태 {ps.get('count'):,}번",
-                    f"5일 뒤 상승 확률 - {ps.get('win5_pct')}%, 평균 {ps.get('avg5_pct'):+}%",
-                    f"20일 뒤 상승 확률 - {ps.get('win20_pct')}%, 평균 {ps.get('avg20_pct'):+}%"]
-            txt = body(sl["first"], "\n".join(sig), "\n".join(past), sl.get("comment", ""), "\n".join(END_FORMAL))
+                why.append(f"20일선 이격도 {s['gap_from_ma20_pct']}%")
+            if fl.get("rsi"):
+                why.append(f"RSI {s['rsi']}")
+            past = ["코스피 전 종목이랑 코스닥 상위 150종목을",
+                    f"과거로 돌려보니 같은 상태가 {ps.get('count'):,}번 있었고",
+                    "",
+                    f"5일 뒤 오를 확률 {ps.get('win5_pct')}%, 평균 {ps.get('avg5_pct'):+}%",
+                    f"20일 뒤 오를 확률 {ps.get('win20_pct')}%, 평균 {ps.get('avg20_pct'):+}%"]
+            basis = ("근거는 " + ", ".join(why) + "입니다") if why else ""
+            txt = body("\n".join(past), basis, sl.get("comment", ""), "\n".join(END_FORMAL[-2:]))
             name = f"6{s['n']}-sig{s['n']}"
             write_md(os.path.join(kdir, name + ".md"), f"오늘 버거대왕 레이더 {s['grade']}등급, {s['name']}", txt)
             shutil.copy(os.path.join(work, s["image"]), os.path.join(kdir, name + ".png"))
@@ -627,9 +647,10 @@ def cmd_blog2(work: str, out: str, key_line: str, end_line: str) -> None:
             continue
         blocks.append(["topic", f"{s['name']} 주가 내일 예상, 지지선·저항선 (어제 결과)"])
         for x in mine:
-            blocks.append(["p", "■ 어제 예상 점검" if x["kind"] == "review" else "■ 내일 예상"])
-            if x["img"]:
-                blocks.append(["img", x["img"], f"{s['name']} {'어제 점검' if x['kind'] == 'review' else '내일 예상'}"])
+            lab = {"review": "어제 예상 점검", "forecast": "내일 예상", "key": "기억할 숫자"}[x["kind"]]
+            blocks.append(["p", "■ " + lab])
+            if x["img"] and x["kind"] != "key":          # 기억할 숫자 글은 내일 예상과 같은 차트라 블로그엔 한 번만
+                blocks.append(["img", x["img"], f"{s['name']} {lab}"])
             blocks.append(["p", strip_end(x["text"])])
         blocks.append(["hr", ""])
     blocks.append(["p", end_line])
