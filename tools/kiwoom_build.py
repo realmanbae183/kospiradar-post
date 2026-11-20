@@ -217,7 +217,8 @@ def build_facts(work: str) -> dict:
               "today": t, "yesterday_chg_pct": yd.get("chg_pct"),
               "ind": {k2: (yd.get(k2), now.get(k2)) for k2 in ("rsi", "rsi_sig", "macd", "macd_sig", "macd_hist", "vol_mult", "ma5", "ma20", "ma60", "ma120", "bb_up", "bb_dn")},
               "cloud_pos": now.get("cloud_pos"), "events": it.get("events", []), "watch": it.get("watch", []),
-              "pivot_hit_1y": it.get("pivot_hit_1y"), "scenario": scenario_lines(it)}
+              "pivot_hit_1y": it.get("pivot_hit_1y"), "scenario": scenario_lines(it),
+              "levels": {"dn1": it["levels"]["down"][0]["price"], "up1": it["levels"]["up"][0]["price"]}}
         r = rmap.get(it["file"])
         if r and r.get("check_ok", True):
             ms, sm = review_marks(r)
@@ -542,7 +543,13 @@ def cmd_build(work: str, slots_path: str, kp: str, what: str = "all") -> None:
             else:
                 probs.append(f"{s['name']} 내일 예상 칸(fc_greet)이 비어 있음")
             # 기억할 숫자(c): 내일 예상과 따로 올리는 글. 제목에 제일 중요한 선 하나, 본문은 보조지표 해설
-            ky = sl.get("key") or {}
+            ky = dict(sl.get("key") or {})
+            if not ky.get("body") and sl.get("fc_indicator"):      # 예약 작업 안내문이 아직 옛 칸(fc_indicator)을 쓰는 경우
+                ky["body"] = sl["fc_indicator"]
+            if ky.get("body") and not ky.get("title"):              # 제목이 없으면 하방 1차 지지를 기억할 숫자로
+                d1 = (s.get("levels") or {}).get("dn1")
+                if d1:
+                    ky["title"] = f"기억해야 할 숫자는 {won(d1, dec=0)}{s['unit'] if s['unit'] != '포인트' else ''}"
             if ky.get("title") and ky.get("body"):
                 check_nums(ky["title"], allowed, f"{s['name']} 기억할 숫자 제목", probs)
                 check_nums(ky["body"], allowed, f"{s['name']} 기억할 숫자 본문", probs)
