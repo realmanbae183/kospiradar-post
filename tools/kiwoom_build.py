@@ -203,7 +203,9 @@ def key_card(dst: str, s: dict, title: str) -> None:
     if lab:
         dr.text((86, 350 + size + 70), lab, font=font("Bold", 50), fill=col)
     try:
-        ch = Image.open(os.path.join(here, "assets/characters/bd12_돋보기.png")).convert("RGBA").resize((520, 520))
+        pick = {"kospi": "bd13_레이더", "samsung": "bd11_차트분석", "hynix": "bd17_반도체",
+                "enerbility": "bd21_에너지원전", "semco": "bd12_돋보기"}.get(s.get("key"), "bd12_돋보기")
+        ch = Image.open(os.path.join(here, f"assets/characters/{pick}.png")).convert("RGBA").resize((520, 520))
         im.paste(ch, (560, 560), ch)
     except Exception as e:
         print("캐릭터 없음:", e)
