@@ -174,6 +174,42 @@ def zoom_chart(src: str, dst: str) -> None:
         print("확대 차트 실패, 원본 사용:", e)
         shutil.copy(src, dst)
 
+
+def key_card(dst: str, s: dict, title: str) -> None:
+    """기억할 숫자 카드: 버거대왕(돋보기) + 큰 숫자. 인스타에도 그대로 쓸 수 있게 1080x1080."""
+    from PIL import Image, ImageDraw
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from cardnews import font
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    m = re.search(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?", title)
+    num = m.group(0) if m else ""
+    v = float(num.replace(",", "")) if num else None
+    lv = s.get("levels") or {}
+    lab, col = "", (40, 40, 40)
+    for k, t, c in (("dn1", "하방 1차 지지", (37, 99, 235)), ("dn2", "하방 2차 지지", (37, 99, 235)),
+                    ("up1", "상방 1차 저항", (220, 38, 38)), ("up2", "상방 2차 저항", (220, 38, 38))):
+        if v is not None and lv.get(k) is not None and abs(lv[k] - v) < 0.6:
+            lab, col = t, c
+            break
+    im = Image.new("RGB", (1080, 1080), "white")
+    dr = ImageDraw.Draw(im)
+    dr.text((80, 90), f"{s['name']}  ·  {s['next']}", font=font("Medium", 40), fill=(120, 120, 120))
+    dr.text((80, 160), "기억할 숫자", font=font("Black", 92), fill=(20, 20, 20))
+    big = f"{num}{'' if s['unit'] == '포인트' else '원'}" if num else title
+    size = 170
+    while size > 80 and dr.textlength(big, font=font("Black", size)) > 920:
+        size -= 6
+    dr.text((80, 330), big, font=font("Black", size), fill=col)
+    if lab:
+        dr.text((86, 330 + size + 70), lab, font=font("Bold", 50), fill=col)
+    try:
+        ch = Image.open(os.path.join(here, "assets/characters/bd12_돋보기.png")).convert("RGBA").resize((520, 520))
+        im.paste(ch, (560, 560), ch)
+    except Exception as e:
+        print("캐릭터 없음:", e)
+    dr.text((80, 980), "버거대왕 국장 레이더", font=font("Medium", 32), fill=(160, 160, 160))
+    im.save(dst)
+
 def reasons(lv: dict) -> str:
     rs = sorted(clean_why(w) for w in lv.get("why", []))
     if any(o == 5 for o, _ in rs):                 # 변동폭으로 옮긴 선은 피봇 값과 가격이 달라서 피봇은 빼고 적는다
@@ -234,7 +270,8 @@ def build_facts(work: str) -> dict:
               "ind": {k2: (yd.get(k2), now.get(k2)) for k2 in ("rsi", "rsi_sig", "macd", "macd_sig", "macd_hist", "vol_mult", "ma5", "ma20", "ma60", "ma120", "bb_up", "bb_dn")},
               "cloud_pos": now.get("cloud_pos"), "events": it.get("events", []), "watch": it.get("watch", []),
               "pivot_hit_1y": it.get("pivot_hit_1y"), "scenario": scenario_lines(it),
-              "levels": {"dn1": it["levels"]["down"][0]["price"], "up1": it["levels"]["up"][0]["price"]}}
+              "levels": {"dn1": it["levels"]["down"][0]["price"], "up1": it["levels"]["up"][0]["price"],
+                         "dn2": it["levels"]["down"][1]["price"], "up2": it["levels"]["up"][1]["price"]}}
         r = rmap.get(it["file"])
         if r and r.get("check_ok", True):
             ms, sm = review_marks(r)
@@ -548,12 +585,18 @@ def cmd_build(work: str, slots_path: str, kp: str, what: str = "all") -> None:
             # 내일 예상(b): 11/20 지훈 님 — 첫 문장(등락률)과 보조지표 덩어리는 빼고, 시나리오 + 인사 + 맺음만
             if sl.get("fc_greet"):
                 check_nums(sl["fc_greet"], allowed, f"{s['name']} 예상 fc_greet", probs)
-                txt = body("\n".join(s["scenario"]), sl["fc_greet"], "\n".join(END_FORMAL))
+                # 11/22 지훈 님: 횡보·하락·인사 앞에 빈 줄 한 번 더, 사진은 확대 차트
+                sc = []
+                for ln in s["scenario"]:
+                    if ln in ("횡보 시나리오", "하락 시나리오"):
+                        sc.append("")
+                    sc.append(ln)
+                txt = body("\n".join(sc) + "\n\n\n" + sl["fc_greet"].strip("\n"), "\n".join(END_FORMAL))
                 name = f"1{n}b-{s['key']}"
                 write_md(os.path.join(kdir, name + ".md"), f"{s['next']} {s['name']} 내일 예상", txt)
                 chart = os.path.join(work, s["file"] + ".png")
                 if os.path.exists(chart):
-                    shutil.copy(chart, os.path.join(kdir, name + ".png"))
+                    zoom_chart(chart, os.path.join(kdir, name + ".png"))
                 made.append(name)
                 blog2.append(("forecast", s, txt, os.path.join(kdir, name + ".png")))
             else:
@@ -569,12 +612,10 @@ def cmd_build(work: str, slots_path: str, kp: str, what: str = "all") -> None:
             if ky.get("title") and ky.get("body"):
                 check_nums(ky["title"], allowed, f"{s['name']} 기억할 숫자 제목", probs)
                 check_nums(ky["body"], allowed, f"{s['name']} 기억할 숫자 본문", probs)
-                txt = body(ky["body"], "\n".join(END_FORMAL[-2:]))
+                txt = body(ky["body"])                       # 11/22 지훈 님: 면책 문구 뺌
                 name = f"1{n}c-{s['key']}-key"
                 write_md(os.path.join(kdir, name + ".md"), f"{s['name']}, {ky['title'].strip()}", txt)
-                chart = os.path.join(work, s["file"] + ".png")
-                if os.path.exists(chart):
-                    zoom_chart(chart, os.path.join(kdir, name + ".png"))
+                key_card(os.path.join(kdir, name + ".png"), s, ky["title"])
                 made.append(name)
                 blog2.append(("key", s, txt, os.path.join(kdir, name + ".png")))
             else:
