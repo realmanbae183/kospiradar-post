@@ -46,7 +46,11 @@ def main(folder, cap_file, test):
     if test:
         print(f"[인스타] 시험 통과 — 사진 {len(kids)}장 묶음 OK, 게시는 안 함")
         return
-    p = requests.post(f"{API}/{IG_USER}/media_publish", data={"creation_id": cid, "access_token": tok}, timeout=60)
+    for _ in range(12):                       # "아직 준비 안 됨"(9007)이면 잠깐 기다렸다 다시
+        p = requests.post(f"{API}/{IG_USER}/media_publish", data={"creation_id": cid, "access_token": tok}, timeout=60)
+        if p.ok or "9007" not in p.text:
+            break
+        time.sleep(10)
     if not p.ok:
         raise SystemExit(f"[인스타] 게시 실패: {p.status_code} {p.text[:300]}")
     print(f"[인스타] 카드뉴스 {len(kids)}장 게시 완료:", p.json().get("id"))
