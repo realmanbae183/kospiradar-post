@@ -158,6 +158,22 @@ def clean_why(w: str) -> tuple[int, str]:
     return 3, NUM_RE.sub("", w).strip()
 
 
+
+def zoom_chart(src: str, dst: str) -> None:
+    """내일 예상 차트에서 최근 봉과 내일 선 부분만 잘라 크게 (11/20 지훈 님: '기억할 숫자' 글은 확대 차트로).
+    레이더 차트는 1080x960 고정 틀(일봉 6주)이라 오른쪽 아래 자리가 늘 같다."""
+    try:
+        from PIL import Image
+        im = Image.open(src).convert("RGB")
+        w, h = im.size
+        box = (int(w * 0.40), int(h * 0.12), int(w * 0.93), int(h * 0.975))
+        cut = im.crop(box)
+        cut = cut.resize((int(cut.width * 1.5), int(cut.height * 1.5)), Image.LANCZOS)
+        cut.save(dst)
+    except Exception as e:                       # 잘라내기가 안 되면 원래 차트를 그대로
+        print("확대 차트 실패, 원본 사용:", e)
+        shutil.copy(src, dst)
+
 def reasons(lv: dict) -> str:
     rs = sorted(clean_why(w) for w in lv.get("why", []))
     if any(o == 5 for o, _ in rs):                 # 변동폭으로 옮긴 선은 피봇 값과 가격이 달라서 피봇은 빼고 적는다
@@ -558,7 +574,7 @@ def cmd_build(work: str, slots_path: str, kp: str, what: str = "all") -> None:
                 write_md(os.path.join(kdir, name + ".md"), f"{s['name']}, {ky['title'].strip()}", txt)
                 chart = os.path.join(work, s["file"] + ".png")
                 if os.path.exists(chart):
-                    shutil.copy(chart, os.path.join(kdir, name + ".png"))
+                    zoom_chart(chart, os.path.join(kdir, name + ".png"))
                 made.append(name)
                 blog2.append(("key", s, txt, os.path.join(kdir, name + ".png")))
             else:
@@ -656,7 +672,7 @@ def cmd_blog2(work: str, out: str, key_line: str, end_line: str) -> None:
         for x in mine:
             lab = {"review": "어제 예상 점검", "forecast": "내일 예상", "key": "기억할 숫자"}[x["kind"]]
             blocks.append(["p", "■ " + lab])
-            if x["img"] and x["kind"] != "key":          # 기억할 숫자 글은 내일 예상과 같은 차트라 블로그엔 한 번만
+            if x["img"]:
                 blocks.append(["img", x["img"], f"{s['name']} {lab}"])
             blocks.append(["p", strip_end(x["text"])])
         blocks.append(["hr", ""])
