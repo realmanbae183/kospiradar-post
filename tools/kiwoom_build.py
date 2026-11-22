@@ -193,21 +193,20 @@ def key_card(dst: str, s: dict, title: str) -> None:
             break
     im = Image.new("RGB", (1080, 1080), "white")
     dr = ImageDraw.Draw(im)
-    dr.text((80, 90), f"{s['name']}  ·  {s['next']}", font=font("Medium", 40), fill=(120, 120, 120))
-    dr.text((80, 160), "기억할 숫자", font=font("Black", 92), fill=(20, 20, 20))
+    dr.text((80, 80), f"내일 {s['name']}", font=font("Black", 76), fill=(20, 20, 20))
+    dr.text((80, 180), "기억할 숫자", font=font("Black", 92), fill=(20, 20, 20))
     big = f"{num}{'' if s['unit'] == '포인트' else '원'}" if num else title
     size = 170
     while size > 80 and dr.textlength(big, font=font("Black", size)) > 920:
         size -= 6
-    dr.text((80, 330), big, font=font("Black", size), fill=col)
+    dr.text((80, 350), big, font=font("Black", size), fill=col)
     if lab:
-        dr.text((86, 330 + size + 70), lab, font=font("Bold", 50), fill=col)
+        dr.text((86, 350 + size + 70), lab, font=font("Bold", 50), fill=col)
     try:
         ch = Image.open(os.path.join(here, "assets/characters/bd12_돋보기.png")).convert("RGBA").resize((520, 520))
         im.paste(ch, (560, 560), ch)
     except Exception as e:
         print("캐릭터 없음:", e)
-    dr.text((80, 980), "버거대왕 국장 레이더", font=font("Medium", 32), fill=(160, 160, 160))
     im.save(dst)
 
 def reasons(lv: dict) -> str:
