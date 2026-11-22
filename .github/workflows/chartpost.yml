@@ -1,0 +1,42 @@
+# 버거대왕 차트 세트(카드뉴스 + 릴스) 인스타 올리기
+#   cards/날짜-종목-set/ 안의 c01~c08.jpg(카드뉴스), reel.mp4(릴스), caption.txt(캡션)를 올린다.
+#   what: 둘 다 / 카드뉴스만 / 릴스만,  mode: 시험(게시 안 함) / 지금 올리기
+#   매일 17·18·19시에 Claude 예약 작업이 종목 하나씩 눌러 준다.
+name: chartpost
+on:
+  workflow_dispatch:
+    inputs:
+      dir: {description: "폴더 (예: cards/2026-11-20-samsung-set)", required: true}
+      what:
+        type: choice
+        options: [둘 다, 카드뉴스만, 릴스만]
+        default: 둘 다
+      mode:
+        type: choice
+        options: [시험(게시 안 함), 지금 올리기]
+        default: 시험(게시 안 함)
+permissions: {contents: read}
+concurrency:
+  group: send
+  cancel-in-progress: false
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: 올리기
+        env:
+          IG_TOKEN: ${{ secrets.IG_TOKEN }}
+          D: ${{ inputs.dir }}
+          WHAT: ${{ inputs.what }}
+          MODE: ${{ inputs.mode }}
+        run: |
+          [ -z "$IG_TOKEN" ] && { echo "::error::Secrets에 IG_TOKEN 이 없어요"; exit 1; }
+          pip install -q requests
+          T=""; [ "$MODE" = "시험(게시 안 함)" ] && T=test
+          if [ "$WHAT" != "릴스만" ]; then python tools/carousel.py "$D" "$D/caption.txt" $T; fi
+          if [ "$WHAT" != "카드뉴스만" ]; then
+            [ "$WHAT" = "둘 다" ] && sleep 20
+            python tools/reel_url.py "$D/reel.mp4" "$D/caption.txt" $T
+          fi
