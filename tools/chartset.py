@@ -11,6 +11,9 @@
   c06 보조지표 (흰 바탕 + 한 줄씩 판정)
   c07 내일 차트 (차트 크게 + 지지·저항 두 줄)
   c08 마무리 (버거대왕 + 면책)
+spec.json 은 cards/2026-11-20-samsung-set/spec.json 을 본보기로 쓴다.
+  prev_day = 직전 거래일 이름("어제", 월요일엔 "금요일"), next = 다음 거래일 이름("내일", 금요일엔 "월요일")
+  photo 가 없으면 cover_char(버거대왕)로 표지를 채운다. music = ../../assets/music/chart/<종목>.mp3
 색: 기본 검정, 좋은 신호 빨강 {r:..}, 나쁜 신호 파랑 {b:..}. 작은 설명 글씨는 넣지 않는다.
 """
 import json, os, re, subprocess, sys, tempfile
@@ -156,7 +159,7 @@ class Set:
         d = ImageDraw.Draw(c)
         f, _ = fitf(d, [sp["title"]], "Black", 200, RW - 2 * M)
         write(d, M, 260, sp["title"], f, base=base, dark=dark)
-        d.text((M, 500), "월요일 차트 미리보기" if not sp.get("reel_sub") else sp["reel_sub"], font=F("Black", 76), fill=base)
+        d.text((M, 500), sp.get("reel_sub") or f"{sp['next']} 차트 미리보기", font=F("Black", 76), fill=base)
         return c
 
     # c02 목차
