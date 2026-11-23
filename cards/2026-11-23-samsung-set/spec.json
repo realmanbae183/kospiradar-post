@@ -1,0 +1,23 @@
+{
+ "title": "삼전 {b:-3.1%}",
+ "hook": "반등 힘 이어질까",
+ "photo": "cover.png",
+ "today": {"open": 177600, "high": 179600, "low": 171500, "close": 177500},
+ "prev_close": 183100,
+ "h_today": ["저가 찍고 6천원 회복", "삼전 {b:-3.06%}"],
+ "h_review": ["2차 {r:171,600}에서 반등", "179,200은 오후 천장"],
+ "h_pos": ["볼린저 하단 {r:171,800}", "아래쪽 첫 받침"],
+ "pos_char": "bd11_차트분석",
+ "support": [171800, 164300],
+ "resist": [179600, 188500],
+ "h_ind": ["RSI {r:32.6} 바닥권", "MACD는 여전히 {b:약세}"],
+ "ind": [["RSI 32.6", "과매도 근처", "red"], ["MACD 데드크로스 지속", "약세", "blue"], ["CCI -141", "과매도권", "red"], ["거래량 평소의 1.03배", "보통", "grey"]],
+ "toc": ["2차 지지 받치고 반등", "아래쪽 받침은 얼마?", "바닥 신호 둘, MACD는 약세", "화요일 체크할 선"],
+ "outro": ["점심 반등 봤으면", "내일은 이어가자"],
+ "outro_char": "bd07_반등기대",
+ "music": "../../assets/music/chart/samsung3.mp3",
+ "prev_day": "금요일",
+ "next": "내일",
+ "review_img": "review.png",
+ "tomorrow_img": "tomorrow.png"
+}
