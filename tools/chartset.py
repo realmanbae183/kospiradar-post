@@ -234,10 +234,25 @@ class Set:
         d.line((X(now), ym, X(r2), ym), fill=BLUE, width=8)
         d.line((X(s2), ym, X(now), ym), fill=RED, width=8)
         fn, fl = F("Bold", 44), F("Medium", 30)
+        # 두 선이 가까우면 글씨가 겹치지 않게 가운데를 벌린다
+        cx = {}
+        for a, b in [(r1, r2), (s2, s1)]:
+            wa = max(d.textlength(num(a), font=fn), d.textlength("1차 저항", font=fl))
+            wb = max(d.textlength(num(b), font=fn), d.textlength("1차 저항", font=fl))
+            ca, cb = X(a), X(b)
+            gap = (wa + wb) / 2 + 24
+            if cb - ca < gap:
+                mid = (ca + cb) / 2
+                ca, cb = mid - gap / 2, mid + gap / 2
+                lo_, hi_ = M - 20 + wa / 2, W - M + 20 - wb / 2
+                if ca < lo_: ca, cb = lo_, lo_ + gap
+                if cb > hi_: ca, cb = hi_ - gap, hi_
+            cx[a], cx[b] = ca, cb
         for p, lab, col, up in [(r2, "2차 저항", BLUE, True), (r1, "1차 저항", BLUE, True),
                                 (s1, "1차 지지", RED, False), (s2, "2차 지지", RED, False)]:
             x = X(p)
             d.ellipse((x - 14, ym - 14, x + 14, ym + 14), fill=col)
+            x = cx[p]
             s_ = num(p)
             sw = d.textlength(s_, font=fn)
             tx = min(max(x - sw / 2, M - 20), W - M + 20 - sw)
