@@ -1,0 +1,23 @@
+{
+ "title": "하닉 {r:+6.7%}",
+ "hook": "갭 위에서 버틸까",
+ "photo": "cover.png",
+ "today": {"open": 1212000, "high": 1212000, "low": 1158000, "close": 1158000},
+ "prev_close": 1085000,
+ "h_today": ["시가가 고가, 종가가 저가", "하닉 {r:+6.73%}"],
+ "h_review": ["시작부터 2차 저항 위", "이번 예상은 {b:빗나감}"],
+ "h_pos": ["1차 지지 {r:113만 7천}", "5일선과 겹친 자리"],
+ "pos_char": "bd13_레이더",
+ "support": [1137000, 1044000],
+ "resist": [1212000, 1246000],
+ "h_ind": ["MACD {r:골든크로스}", "SAR은 아직 {b:하락}"],
+ "ind": [["MACD 골든크로스", "매수 신호", "red"], ["RSI 42.3", "시그널 위로", "red"], ["CCI -47", "-100 위로", "red"], ["파라볼릭 SAR", "하락 유지", "blue"]],
+ "toc": ["갭에 두 선 다 넘어감", "받침은 5일선 자리", "골든크로스, SAR은 하락", "수요일 노릴 두 선"],
+ "outro": ["반도체 형님 웃음", "내일까지 부탁해요"],
+ "outro_char": "bd17_반도체",
+ "music": "../../assets/music/chart/hynix.mp3",
+ "prev_day": "어제",
+ "next": "내일",
+ "review_img": "review.png",
+ "tomorrow_img": "tomorrow.png"
+}
