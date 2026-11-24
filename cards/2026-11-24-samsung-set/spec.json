@@ -1,0 +1,23 @@
+{
+ "title": "삼전 {r:+6.7%}",
+ "hook": "19만원 다시 넘을까",
+ "photo": "cover.png",
+ "today": {"open": 193200, "high": 193700, "low": 187500, "close": 189400},
+ "prev_close": 177500,
+ "h_today": ["19만3천 열고 {b:밀림}", "삼전 {r:+6.70%}"],
+ "h_review": ["위쪽을 {b:덜 봤다}", "2차 188,500 위 마감"],
+ "h_pos": ["1차 지지 {r:187,500}", "5일선 바로 아래 받침"],
+ "pos_char": "bd12_돋보기",
+ "support": [187500, 179800],
+ "resist": [193700, 204500],
+ "h_ind": ["CCI -100 {r:위로}", "MACD는 {b:시그널 아래}"],
+ "ind": [["CCI -70", "-100 위로", "red"], ["종가 5일선 위", "단기 회복", "red"], ["MACD 시그널 아래", "약세 남음", "blue"], ["거래량 평소의 0.84배", "보통", "grey"]],
+ "toc": ["위쪽 여유를 덜 봤다", "받침은 187,500", "CCI 탈출, MACD는 아래", "내일 체크할 두 선"],
+ "outro": ["삼전 주주님들", "오늘은 꿀잠 각"],
+ "outro_char": "bd02_상승미소",
+ "music": "../../assets/music/chart/samsung2.mp3",
+ "prev_day": "어제",
+ "next": "내일",
+ "review_img": "review.png",
+ "tomorrow_img": "tomorrow.png"
+}
