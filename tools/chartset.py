@@ -17,7 +17,7 @@ spec.json 은 cards/2026-11-20-samsung-set/spec.json 을 본보기로 쓴다.
 색: 기본 검정, 좋은 신호 빨강 {r:..}, 나쁜 신호 파랑 {b:..}. 작은 설명 글씨는 넣지 않는다.
 """
 import json, os, re, subprocess, sys, tempfile
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -117,8 +117,14 @@ class Set:
 
     def cover_photo(self, c, box, radius=40):
         sp = self.sp
-        if sp.get("photo"):
-            paste_img(c, self.p(sp["photo"]), box, radius=radius, border=None)
+        if sp.get("photo"):                         # 사진은 자르거나 확대하지 않고 칸 안에 통째로 맞춤
+            x0, y0, x1, y1 = [int(v) for v in box]
+            im = Image.open(self.p(sp["photo"])).convert("RGB")
+            r = min((x1 - x0) / im.width, (y1 - y0) / im.height)
+            im = im.resize((round(im.width * r), round(im.height * r)), Image.LANCZOS)
+            m = Image.new("L", im.size, 0)
+            ImageDraw.Draw(m).rounded_rectangle((0, 0, im.width - 1, im.height - 1), radius=radius, fill=255)
+            c.paste(im, ((x0 + x1 - im.width) // 2, y0 + (y1 - y0 - im.height) // 2), m)
         else:                                       # 짤이 없으면 버거대왕
             x0, y0, x1, y1 = box
             ImageDraw.Draw(c).rounded_rectangle(box, radius=radius, fill="#F2F3F5")
@@ -140,16 +146,17 @@ class Set:
     def reel_cover(self):
         sp = self.sp
         if sp.get("photo"):
-            c = Image.new("RGB", (RW, RH), "black")
             im = Image.open(self.p(sp["photo"])).convert("RGB")
+            # 뒤는 같은 사진을 크게 흐리게 깔고, 사진 본체는 자르거나 확대하지 않고 통째로 맞춤
             r = max(RW / im.width, RH / im.height)
+            bg = im.resize((round(im.width * r), round(im.height * r)), Image.LANCZOS)
+            l, t = (bg.width - RW) // 2, (bg.height - RH) // 2
+            bg = bg.crop((l, t, l + RW, t + RH)).filter(ImageFilter.GaussianBlur(40))
+            c = Image.composite(Image.new("RGB", (RW, RH), "black"), bg, Image.new("L", (RW, RH), 150))
+            top, bot = 640, RH - 120
+            r = min(RW / im.width, (bot - top) / im.height)
             im = im.resize((round(im.width * r), round(im.height * r)), Image.LANCZOS)
-            l = (im.width - RW) // 2
-            c.paste(im.crop((l, 0, l + RW, RH)), (0, 0))
-            g = Image.new("L", (1, RH))
-            for y in range(RH):
-                g.putpixel((0, y), 220 if y < 200 else int(max(0, 220 - (y - 200) * 0.4)))
-            c = Image.composite(Image.new("RGB", (RW, RH), "black"), c, g.resize((RW, RH)))
+            c.paste(im, ((RW - im.width) // 2, top + (bot - top - im.height) // 2))
             dark, base = True, "#FFFFFF"
         else:
             c = Image.new("RGB", (RW, RH), "#F2F3F5")
